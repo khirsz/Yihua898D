@@ -1,5 +1,5 @@
-#ifndef youyoue858d_h
-#define youyoue858d_h
+#ifndef YIHUA898D_h
+#define YIHUA898D_h
 
 /*
  * See the Docs folder for how to add a 1 Ohm current sense
@@ -16,34 +16,65 @@
  *
  */
 
+include "Arduino.h"
+ 
+ 
 #define DEBUG
 
-#define CURRENT_SENSE_MOD
+//#define CURRENT_SENSE_MOD
 //#define SPEED_SENSE_MOD
 
 #define USE_WATCHDOG
 //#define WATCHDOG_TEST
 
-
-#define FAN_OFF ( PORTC |= _BV(PC3) )
-#define FAN_ON  ( PORTC &= ~_BV(PC3) )
-#define FAN_IS_ON ( !(PINC & _BV(PC3)) )
-#define FAN_IS_OFF ( PINC & _BV(PC3) )
+#define FAN_PIN   4 
+#define FAN_INIT  pinMode(FAN_PIN, OUTPUT)
+#define FAN_OFF   digitalWrite(FAN_PIN, HIGH)
+#define FAN_ON    digitalWrite(FAN_PIN, LOW)
 
 // THIS IS WHERE IT GETS DANGEROUS
 // YOU CAN START A FIRE AND DO A LOT OF HARM WITH
 // THE HEATER / TRIAC COMMANDS
-#define TRIAC_ON ( PORTB &= ~_BV(PB1) )
-#define HEATER_ON TRIAC_ON
-#define TRIAC_OFF ( PORTB |= _BV(PB1) )
-#define HEATER_OFF TRIAC_OFF
+#define HA_HEATER_PIN     2
+#define HA_HEATER_INIT    pinMode(HA_HEATER_PIN, OUTPUT)
+#define HA_HEATER_ON      digitalWrite(HA_HEATER_PIN, LOW)
+#define HA_HEATER_OFF     digitalWrite(HA_HEATER_PIN, HIGH)
+
+#define SI_HEATER_PIN     3
+#define SI_HEATER_INIT    pinMode(SI_HEATER_PIN, OUTPUT)
+#define SI_HEATER_ON      digitalWrite(SI_HEATER_PIN, HIGH)
+#define SI_HEATER_OFF     digitalWrite(SI_HEATER_PIN, LOW)
+
+#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
+
+
+#define HA_TEMP_PIN       A0
+#define SI_TEMP_PIN       A1
+
+#ifdef CURRENT_SENSE_MOD
+#define FAN_CURRENT_PIN   A2
+#elif
+#define FAN_SPEED_PIN     A2
+#endif
+
+#define REEDSW_PIN        10
+#define REEDSW_INIT       pinMode(REEDSW_PIN, INPUT_PULLUP)
+#define REEDSW_CLOSED     (!digitalRead(REEDSW_PIN))
+#define REEDSW_OPEN       digitalRead(REEDSW_PIN)
+
+#define HA_SW_PIN        5
+#define HA_SW_INIT       pinMode(HA_SW_PIN, INPUT_PULLUP)
+#define HA_SW_ON         (!digitalRead(HA_SW_PIN))
+#define HA_SW_OFF        digitalRead(HA_SW_PIN)
+
+#define SI_SW_PIN        6
+#define SI_SW_INIT       pinMode(SI_SW_PIN, INPUT_PULLUP)
+#define SI_SW_ON         (!digitalRead(SI_SW_PIN))
+#define SI_SW_OFF        digitalRead(SI_SW_PIN)
 
 #define BUTTON_SCANN_CYCLE   100
 
 #define LED_POW   2
-
-#define REEDSW_CLOSED ( !(PINB & _BV(PB4)) )
-#define REEDSW_OPEN ( PINB & _BV(PB4) )
 
 #define SHOW_SETPOINT_TIMEOUT 2000L
 
@@ -98,7 +129,8 @@
 
 #define KEY_UP          BT_UP
 #define KEY_DOWN        BT_DW
-#define ALL_KEYS        (KEY_DOWN | KEY_UP)
+#define KEY_ENTER       BT_EN
+#define ALL_KEYS        (KEY_DOWN | KEY_UP | KEY_ENTER)
 
 #define REPEAT_MASK     (KEY_DOWN | KEY_UP)
 #define REPEAT_START    5	// after 5*100ms = 500ms
@@ -200,4 +232,4 @@ uint8_t get_key_rpt_l(uint8_t key_mask);
 uint8_t get_key_common(uint8_t key_mask);
 uint8_t get_key_common_l(uint8_t key_mask);
 
-#endif				// youyoue858d_h
+#endif				// YIHUA898D_h

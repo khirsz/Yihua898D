@@ -50,17 +50,7 @@
 #define FW_MINOR_V_A 4
 #define FW_MINOR_V_B 6
 /*
- * PC3: TIP122.base --> FAN (OK)
- * PC2: fan-current-sense mod (OPTIONAL) - see Docs folder
- * PC0: ADC <-- amplif. thermo couple voltage (A0 in Arduino lingo) (OK)
  * #21: AREF <--- about 2.5V as analog reference for ADC
- * PB1: opto-triac driver !! THIS IS DANGEROUS TO USE !! (OK)
- *
- *
- * PB5: SW1 (button1) (OK)
- * PB2: SW2 (button2) (OK)
- * PB4: reed switch (wand cradle sensor) (OK)
- *
  */
 
 #include <avr/io.h>
@@ -78,8 +68,8 @@ const char wdt_signature [] = "WDT_RESET";
 char * p = (char *) malloc(sizeof(wdt_signature));
 #endif
 
-// define a module on data pin 9, clock pin 8 and strobe pin 7
-TM1628 tm1628(9, 8, 7);
+// define a module on data pin 8, clock pin 9 and strobe pin 7
+TM1628 tm1628(8, 9, 7);
 
 // HOT AIR configuration
 HA_CFG ha_cfg = {
@@ -180,7 +170,7 @@ void setup()
 	if (watchdog_check()) 
   {
 		// there was a watchdog reset - should never ever happen
-		HEATER_OFF;
+		HA_HEATER_OFF;
 		FAN_ON;
 #ifdef DEBUG
     Serial.println("WDT reset!");
@@ -215,7 +205,7 @@ void loop() {
 		static int32_t button_input_time = 0;
     static int32_t button_scann_time = 0;
 
-		ha_state.adc_raw = analogRead(A0);	// need raw value later, store it here and avoid 2nd ADC read
+		ha_state.adc_raw = analogRead(HA_TEMP_PIN);	// need raw value later, store it here and avoid 2nd ADC read
 
 		ha_state.temp_inst = ha_state.adc_raw + ha_cfg.temp_offset_corr.value;	// approx. temp in °C
 
@@ -224,7 +214,7 @@ void loop() {
 		}
 		// pid loop / heater handling
 		if (ha_cfg.fan_only.value == 1 || REEDSW_CLOSED) {
-			HEATER_OFF;
+			HA_HEATER_OFF;
 			ha_state.heater_start_time = millis();
 			tm1628.clearDot(DISP_2,0);
 		} else if (REEDSW_OPEN && (ha_cfg.temp_setpoint.value >= ha_cfg.temp_setpoint.value_min)
@@ -259,9 +249,9 @@ void loop() {
 
 			if (ha_state.heater_ctr < ha_state.heater_duty_cycle) {
 				tm1628.setDot(DISP_2,0);
-				HEATER_ON;
+				HA_HEATER_ON;
 			} else {
-				HEATER_OFF;
+				HA_HEATER_OFF;
 				tm1628.clearDot(DISP_2,0);
 			}
 
@@ -270,7 +260,7 @@ void loop() {
 				ha_state.heater_ctr = 0;
 			}
 		} else {
-			HEATER_OFF;
+			HA_HEATER_OFF;
 			tm1628.clearDot(DISP_2,0);
 		}
 
@@ -333,7 +323,7 @@ void loop() {
 
 			ha_state.temp_setpoint_saved = 0;
 		} else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
-			HEATER_OFF;	// security reasons, delay below!
+			HA_HEATER_OFF;	// security reasons, delay below!
 #ifdef USE_WATCHDOG
 			watchdog_off();
 #endif
@@ -370,7 +360,7 @@ void loop() {
 		// security first!
 		if (ha_state.temp_average >= MAX_TEMP_ERR) {
 			// something might have gone terribly wrong
-			HEATER_OFF;
+			HA_HEATER_OFF;
 			FAN_ON;
 #ifdef USE_WATCHDOG
 			watchdog_off();
@@ -458,17 +448,26 @@ void loop() {
 
 void setup_HW(void)
 {
-	HEATER_OFF;
-	DDRB |= _BV(PB1);	// set as output for TRIAC control
+  HA_HEATER_INIT;
+	HA_HEATER_OFF;
+  
+  SI_HEATER_INIT;
+	SI_HEATER_OFF;
 
-	DDRB &= ~_BV(PB4);	// set as input (reed sensor)
-	PORTB |= _BV(PB4);	// pull-up on
-
+  FAN_INIT;
 	FAN_OFF;
-	DDRC |= _BV(PC3);	// set as output (FAN control)
+  
+  REEDSW_INIT;
+  HA_SW_INIT;
+  SI_SW_INIT;
+  
+  pinMode(HA_TEMP_PIN, INPUT);
+  pinMode(SI_TEMP_PIN, INPUT);
 
 #ifdef CURRENT_SENSE_MOD
-	DDRC &= ~_BV(PC2);	// set as input
+	pinMode(FAN_CURRENT_PIN, INPUT);	// set as input
+#elif SPEED_SENSE_MOD
+	pinMode(FAN_SPEED_PIN, INPUT);	// set as input
 #endif
 
 	analogReference(EXTERNAL);	// use external 2.5V as ADC reference voltage (VCC / 2)
@@ -498,10 +497,10 @@ void setup_HW(void)
 			uint16_t fan;
 			delay(500);
 #ifdef CURRENT_SENSE_MOD
-			fan = analogRead(A2);
+			fan = analogRead(FAN_CURRENT_PIN);
       tm1628.showNum(DISP_2,fan);
 #elif SPEED_SENSE_MOD
-			fan = analogRead(A5);
+			fan = analogRead(FAN_SPEED_PIN);
       tm1628.showNum(DISP_2,fan);
 #endif				//CURRENT_SENSE_MOD
 			
@@ -680,7 +679,7 @@ void clear_eeprom_saved_dot(uint8_t disp)
 
 void fan_test(void)
 {
-	HEATER_OFF;
+	HA_HEATER_OFF;
 
 	// if the wand is not in the cradle when powered up, go into a safe mode
 	// and display an error
@@ -701,7 +700,7 @@ void fan_test(void)
 	uint16_t fan_current;
 	FAN_ON;
 	delay(3000);
-	fan_current = analogRead(A2);
+	fan_current = analogRead(FAN_CURRENT_PIN);
 
 	if ((fan_current < (uint16_t) (ha_cfg.fan_current_min.value)) || (fan_current > (uint16_t) (ha_cfg.fan_current_max.value))) {
   	// the fan is not working as it should
@@ -721,7 +720,7 @@ void fan_test(void)
 	uint16_t fan_speed;
 	FAN_ON;
 	delay(3000);
-	fan_speed = analogRead(A5);
+	fan_speed = analogRead(FAN_SPEED_PIN);
 
 	if ((fan_speed < (uint16_t) (ha_cfg.fan_speed_min.value)) || (fan_speed > (uint16_t) (ha_cfg.fan_speed_max.value))) {
 		// the fan is not working as it should
