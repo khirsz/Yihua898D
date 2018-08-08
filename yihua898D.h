@@ -209,6 +209,7 @@ typedef struct CNTRL_STATE {
   uint8_t enabled;
 } CNTRL_STATE;
 
+void HA_cntrl(void);
 void change_config_parameter(CPARAM * param, const char *string, uint8_t disp);
 void clear_eeprom_saved_dot(uint8_t disp);
 void eep_load(CPARAM * param);
