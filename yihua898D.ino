@@ -111,6 +111,7 @@ CNTRL_STATE ha_state = {
   /* temp_setpoint_saved_time  */   0,
   /* heater_start_time         */   0,
   /* adc_raw                   */   0,
+  /* enabled                   */   0,
 };
 
 // SOLDERING IRON configuration
@@ -141,6 +142,7 @@ CNTRL_STATE si_state = {
   /* temp_setpoint_saved_time  */   0,
   /* heater_start_time         */   0,
   /* adc_raw                   */   0,
+  /* enabled                   */   0,
 };
 
 volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: key pressed
@@ -189,8 +191,6 @@ void setup()
 
   show_firmware_version();
 
-  fan_test();
-
 #ifdef USE_WATCHDOG
   test_F_CPU_with_watchdog();
   watchdog_on();
@@ -202,241 +202,267 @@ void loop() {
     int32_t start_time = micros();
 #endif
 
+#ifdef USE_WATCHDOG
+    wdt_reset();
+#endif
+
     static int32_t button_input_time = 0;
     static int32_t button_scann_time = 0;
 
-    ha_state.adc_raw = analogRead(HA_TEMP_PIN); // need raw value later, store it here and avoid 2nd ADC read
-
-    ha_state.temp_inst = ha_state.adc_raw + ha_cfg.temp_offset_corr.value;  // approx. temp in °C
-
-    if (ha_state.temp_inst < 0) {
-      ha_state.temp_inst = 0;
+    if (!ha_state.enabled && HA_SW_ON)
+    {
+      // Enable HA
+      // Debounce
+      delay(40);
+      wdt_reset();
+      if (HA_SW_ON)
+      {
+        ha_state.enabled = 1;
+        fan_test();
+      }      
+    } else if (ha_state.enabled && HA_SW_OFF) 
+    {
+      // Disable HA
+      // Debounce
+      delay(40);
+      wdt_reset();
+      if (HA_SW_OFF)
+      {
+        ha_state.enabled = 0;
+      } 
     }
-    // pid loop / heater handling
-    if (ha_cfg.fan_only.value == 1 || REEDSW_CLOSED) {
-      HA_HEATER_OFF;
-      ha_state.heater_start_time = millis();
-      tm1628.clearDot(DISP_2,0);
-    } else if (REEDSW_OPEN && (ha_cfg.temp_setpoint.value >= ha_cfg.temp_setpoint.value_min)
-         && (ha_state.temp_average < MAX_TEMP_ERR) && ((millis() - ha_state.heater_start_time) < ((uint32_t) (ha_cfg.slp_timeout.value) * 60 * 1000))) {
 
-      FAN_ON;
-
-      ha_state.error = ha_cfg.temp_setpoint.value - ha_state.temp_average;
-      ha_state.velocity = ha_state.temp_average_previous - ha_state.temp_average;
-
-      if (abs(ha_state.error) < ha_cfg.i_thresh.value) {
-        // if close enough to target temperature use PID control
-        ha_state.error_accu += ha_state.error;
-      } else {
-        // otherwise only use PD control (avoids issues with ha_state.error_accu growing too large
-        ha_state.error_accu = 0;
+    if (ha_state.enabled)
+    {
+      ha_state.adc_raw = analogRead(HA_TEMP_PIN); // need raw value later, store it here and avoid 2nd ADC read
+  
+      ha_state.temp_inst = ha_state.adc_raw + ha_cfg.temp_offset_corr.value;  // approx. temp in °C
+  
+      if (ha_state.temp_inst < 0) {
+        ha_state.temp_inst = 0;
       }
-
-      ha_state.PID_drive =
-          ha_state.error * (ha_cfg.p_gain.value / P_GAIN_SCALING) + ha_state.error_accu * (ha_cfg.i_gain.value / I_GAIN_SCALING) +
-          ha_state.velocity * (ha_cfg.d_gain.value / D_GAIN_SCALING);
-
-      ha_state.heater_duty_cycle = (int16_t) (ha_state.PID_drive);
-
-      if (ha_state.heater_duty_cycle > HEATER_DUTY_CYCLE_MAX) {
-        ha_state.heater_duty_cycle = HEATER_DUTY_CYCLE_MAX;
-      }
-
-      if (ha_state.heater_duty_cycle < 0) {
-        ha_state.heater_duty_cycle = 0;
-      }
-
-      if (ha_state.heater_ctr < ha_state.heater_duty_cycle) {
-        tm1628.setDot(DISP_2,0);
-        HA_HEATER_ON;
+      // pid loop / heater handling
+      if (ha_cfg.fan_only.value == 1 || REEDSW_CLOSED) {
+        HA_HEATER_OFF;
+        ha_state.heater_start_time = millis();
+        tm1628.clearDot(DISP_2,0);
+      } else if (REEDSW_OPEN && (ha_cfg.temp_setpoint.value >= ha_cfg.temp_setpoint.value_min)
+           && (ha_state.temp_average < MAX_TEMP_ERR) && ((millis() - ha_state.heater_start_time) < ((uint32_t) (ha_cfg.slp_timeout.value) * 60 * 1000))) {
+  
+        FAN_ON;
+  
+        ha_state.error = ha_cfg.temp_setpoint.value - ha_state.temp_average;
+        ha_state.velocity = ha_state.temp_average_previous - ha_state.temp_average;
+  
+        if (abs(ha_state.error) < ha_cfg.i_thresh.value) {
+          // if close enough to target temperature use PID control
+          ha_state.error_accu += ha_state.error;
+        } else {
+          // otherwise only use PD control (avoids issues with ha_state.error_accu growing too large
+          ha_state.error_accu = 0;
+        }
+  
+        ha_state.PID_drive =
+            ha_state.error * (ha_cfg.p_gain.value / P_GAIN_SCALING) + ha_state.error_accu * (ha_cfg.i_gain.value / I_GAIN_SCALING) +
+            ha_state.velocity * (ha_cfg.d_gain.value / D_GAIN_SCALING);
+  
+        ha_state.heater_duty_cycle = (int16_t) (ha_state.PID_drive);
+  
+        if (ha_state.heater_duty_cycle > HEATER_DUTY_CYCLE_MAX) {
+          ha_state.heater_duty_cycle = HEATER_DUTY_CYCLE_MAX;
+        }
+  
+        if (ha_state.heater_duty_cycle < 0) {
+          ha_state.heater_duty_cycle = 0;
+        }
+  
+        if (ha_state.heater_ctr < ha_state.heater_duty_cycle) {
+          tm1628.setDot(DISP_2,0);
+          HA_HEATER_ON;
+        } else {
+          HA_HEATER_OFF;
+          tm1628.clearDot(DISP_2,0);
+        }
+  
+        ha_state.heater_ctr++;
+        if (ha_state.heater_ctr == PWM_CYCLES) {
+          ha_state.heater_ctr = 0;
+        }
       } else {
         HA_HEATER_OFF;
         tm1628.clearDot(DISP_2,0);
       }
-
-      ha_state.heater_ctr++;
-      if (ha_state.heater_ctr == PWM_CYCLES) {
-        ha_state.heater_ctr = 0;
+  
+      static uint16_t temp_avg_ctr = 0;
+  
+      ha_state.temp_accu += ha_state.temp_inst;
+      temp_avg_ctr++;
+  
+      if (temp_avg_ctr == (uint16_t) (ha_cfg.temp_averages.value)) {
+        ha_state.temp_average_previous = ha_state.temp_average;
+        ha_state.temp_average = ha_state.temp_accu / ha_cfg.temp_averages.value;
+        ha_state.temp_accu = 0;
+        temp_avg_ctr = 0;
       }
-    } else {
-      HA_HEATER_OFF;
-      tm1628.clearDot(DISP_2,0);
-    }
-
-    static uint16_t temp_avg_ctr = 0;
-
-    ha_state.temp_accu += ha_state.temp_inst;
-    temp_avg_ctr++;
-
-    if (temp_avg_ctr == (uint16_t) (ha_cfg.temp_averages.value)) {
-      ha_state.temp_average_previous = ha_state.temp_average;
-      ha_state.temp_average = ha_state.temp_accu / ha_cfg.temp_averages.value;
-      ha_state.temp_accu = 0;
-      temp_avg_ctr = 0;
-    }
-    // fan/cradle handling
-    if (ha_state.temp_average >= FAN_ON_TEMP) {
-      FAN_ON;
-    } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 1 && (ha_state.temp_average <= FAN_OFF_TEMP_FANONLY)) {
-      FAN_OFF;
-    } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 0 && (ha_state.temp_average <= FAN_OFF_TEMP)) {
-      FAN_OFF;
-    } else if (REEDSW_OPEN) {
-      FAN_ON;
-    }
-    // menu key handling
-    if (millis() - button_scann_time > BUTTON_SCANN_CYCLE)
-    {
-      key_scann();
-      button_scann_time = millis();
-    }
-    if (get_key_short(KEY_UP)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
-        ha_cfg.temp_setpoint.value++;
+      // fan/cradle handling
+      if (ha_state.temp_average >= FAN_ON_TEMP) {
+        FAN_ON;
+      } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 1 && (ha_state.temp_average <= FAN_OFF_TEMP_FANONLY)) {
+        FAN_OFF;
+      } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 0 && (ha_state.temp_average <= FAN_OFF_TEMP)) {
+        FAN_OFF;
+      } else if (REEDSW_OPEN) {
+        FAN_ON;
       }
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_short(KEY_DOWN)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
-        ha_cfg.temp_setpoint.value--;
+      // menu key handling
+      if (millis() - button_scann_time > BUTTON_SCANN_CYCLE)
+      {
+        key_scann();
+        button_scann_time = millis();
       }
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
-        ha_cfg.temp_setpoint.value += 10;
-      } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
-      }
-      ha_state.temp_setpoint_saved = 0;
-
-    } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
-      button_input_time = millis();
-
-      if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
-        ha_cfg.temp_setpoint.value -= 10;
-      } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
-      }
-
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
-      HA_HEATER_OFF;  // security reasons, delay below!
-#ifdef USE_WATCHDOG
-      watchdog_off();
-#endif
-      delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
-      if (get_key_long_r(KEY_UP | KEY_DOWN)) {
-        change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
-        change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
-        change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
-        change_config_parameter(&ha_cfg.i_thresh, "ItH", DISP_2);
-        change_config_parameter(&ha_cfg.temp_offset_corr, "toF", DISP_2);
-        change_config_parameter(&ha_cfg.temp_averages, "Avg", DISP_2);
-        change_config_parameter(&ha_cfg.slp_timeout, "SLP", DISP_2);
-        change_config_parameter(&ha_cfg.display_adc_raw, "Adc", DISP_2);
-#ifdef CURRENT_SENSE_MOD
-        change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
-        change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
-#elif SPEED_SENSE_MOD
-        change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
-        change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
-#endif
-      } else {
-        get_key_press(KEY_UP | KEY_DOWN); // clear inp state
-        ha_cfg.fan_only.value ^= 0x01;
+      if (get_key_short(KEY_UP)) {
+        button_input_time = millis();
+        if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
+          ha_cfg.temp_setpoint.value++;
+        }
         ha_state.temp_setpoint_saved = 0;
-        if (ha_cfg.fan_only.value == 0) {
-          button_input_time = millis(); // show set temp after disabling fan only mode
+      } else if (get_key_short(KEY_DOWN)) {
+        button_input_time = millis();
+        if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
+          ha_cfg.temp_setpoint.value--;
         }
-        display_blink = 0;  // make sure we start displaying "FAn" or set temp
-      }
-#ifdef USE_WATCHDOG
-      watchdog_on();
-#endif
-    }
-    // security first!
-    if (ha_state.temp_average >= MAX_TEMP_ERR) {
-      // something might have gone terribly wrong
-      HA_HEATER_OFF;
-      FAN_ON;
-#ifdef USE_WATCHDOG
-      watchdog_off();
-#endif
-#ifdef DEBUG
-      Serial.println("Hot air temperature meas. error!");
-#endif
-      while (1) {
-        // stay here until the power is cycled
-        // make sure the user notices the error by blinking "FAn"
-        // and don't resume operation if the error goes away on its own
-        //
-        // possible reasons to be here:
-        //
-        // * wand is not connected (false temperature reading)
-        // * thermo couple has failed
-        // * true over-temperature condition
-        //
-        tm1628.showStr(DISP_2,"*C");
-        delay(1000);
-        tm1628.showStr(DISP_2,"Err");
-        delay(2000);
-        tm1628.clear(DISP_2);
-        delay(1000);
-      }
-    }
-    // display output
-    if ((millis() - button_input_time) < SHOW_SETPOINT_TIMEOUT) {
-      if (display_blink < 5) {
-        tm1628.clear(DISP_2);
-      } else {
-        tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
-      }
-    } else {
-      if (ha_state.temp_setpoint_saved == 0) {
-        set_eeprom_saved_dot(DISP_2);
-        eep_save(&ha_cfg.temp_setpoint);
-        eep_save(&ha_cfg.fan_only);
-        ha_state.temp_setpoint_saved_time = millis();
-        ha_state.temp_setpoint_saved = 1;
-      } else if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
-        if (ha_cfg.fan_only.value == 1) {
-          tm1628.showStr(DISP_2,"FAn");
+        ha_state.temp_setpoint_saved = 0;
+      } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
+        button_input_time = millis();
+        if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
+          ha_cfg.temp_setpoint.value += 10;
         } else {
-          tm1628.showStr(DISP_2,"---");
+          ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
         }
-      } else if (ha_cfg.fan_only.value == 1) {
-        if (display_blink < 20) {
-          tm1628.showStr(DISP_2,"FAn");
+        ha_state.temp_setpoint_saved = 0;
+  
+      } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
+        button_input_time = millis();
+  
+        if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
+          ha_cfg.temp_setpoint.value -= 10;
+        } else {
+          ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
+        }
+  
+        ha_state.temp_setpoint_saved = 0;
+      } else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
+        HA_HEATER_OFF;  // security reasons, delay below!
+  #ifdef USE_WATCHDOG
+        watchdog_off();
+  #endif
+        delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
+        if (get_key_long_r(KEY_UP | KEY_DOWN)) {
+          change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
+          change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
+          change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
+          change_config_parameter(&ha_cfg.i_thresh, "ItH", DISP_2);
+          change_config_parameter(&ha_cfg.temp_offset_corr, "toF", DISP_2);
+          change_config_parameter(&ha_cfg.temp_averages, "Avg", DISP_2);
+          change_config_parameter(&ha_cfg.slp_timeout, "SLP", DISP_2);
+          change_config_parameter(&ha_cfg.display_adc_raw, "Adc", DISP_2);
+  #ifdef CURRENT_SENSE_MOD
+          change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
+          change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
+  #elif SPEED_SENSE_MOD
+          change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
+          change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
+  #endif
+        } else {
+          get_key_press(KEY_UP | KEY_DOWN); // clear inp state
+          ha_cfg.fan_only.value ^= 0x01;
+          ha_state.temp_setpoint_saved = 0;
+          if (ha_cfg.fan_only.value == 0) {
+            button_input_time = millis(); // show set temp after disabling fan only mode
+          }
+          display_blink = 0;  // make sure we start displaying "FAn" or set temp
+        }
+  #ifdef USE_WATCHDOG
+        watchdog_on();
+  #endif
+      }
+      // security first!
+      if (ha_state.temp_average >= MAX_TEMP_ERR) {
+        // something might have gone terribly wrong
+        HA_HEATER_OFF;
+        FAN_ON;
+  #ifdef USE_WATCHDOG
+        watchdog_off();
+  #endif
+  #ifdef DEBUG
+        Serial.println("Hot air temperature meas. error!");
+  #endif
+        while (1) {
+          // stay here until the power is cycled
+          // make sure the user notices the error by blinking "FAn"
+          // and don't resume operation if the error goes away on its own
+          //
+          // possible reasons to be here:
+          //
+          // * wand is not connected (false temperature reading)
+          // * thermo couple has failed
+          // * true over-temperature condition
+          //
+          tm1628.showStr(DISP_2,"*C");
+          delay(1000);
+          tm1628.showStr(DISP_2,"Err");
+          delay(2000);
+          tm1628.clear(DISP_2);
+          delay(1000);
+        }
+      }
+      // display output
+      if ((millis() - button_input_time) < SHOW_SETPOINT_TIMEOUT) {
+        if (display_blink < 5) {
+          tm1628.clear(DISP_2);
+        } else {
+          tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
+        }
+      } else {
+        if (ha_state.temp_setpoint_saved == 0) {
+          set_eeprom_saved_dot(DISP_2);
+          eep_save(&ha_cfg.temp_setpoint);
+          eep_save(&ha_cfg.fan_only);
+          ha_state.temp_setpoint_saved_time = millis();
+          ha_state.temp_setpoint_saved = 1;
+        } else if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
+          if (ha_cfg.fan_only.value == 1) {
+            tm1628.showStr(DISP_2,"FAn");
+          } else {
+            tm1628.showStr(DISP_2,"---");
+          }
+        } else if (ha_cfg.fan_only.value == 1) {
+          if (display_blink < 20) {
+            tm1628.showStr(DISP_2,"FAn");
+          } else {
+            tm1628.showNum(DISP_2,ha_state.temp_average);
+          }
+        } else if (ha_cfg.display_adc_raw.value == 1) {
+          tm1628.showNum(DISP_2,ha_state.adc_raw);
+        } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
+          tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
         } else {
           tm1628.showNum(DISP_2,ha_state.temp_average);
         }
-      } else if (ha_cfg.display_adc_raw.value == 1) {
-        tm1628.showNum(DISP_2,ha_state.adc_raw);
-      } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
-        tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
-      } else {
-        tm1628.showNum(DISP_2,ha_state.temp_average);
       }
+  
+      if ((millis() - ha_state.temp_setpoint_saved_time) > 500) {
+        clear_eeprom_saved_dot(DISP_2);
+      }
+  
+      tm1628.update();
     }
-
-    if ((millis() - ha_state.temp_setpoint_saved_time) > 500) {
-      clear_eeprom_saved_dot(DISP_2);
-    }
-
-    tm1628.update();
 
 #if defined(WATCHDOG_TEST) && defined(USE_WATCHDOG)
     // watchdog test
     if (ha_state.temp_average > 100) {
       delay(150);
     }
-#endif
-
-#ifdef USE_WATCHDOG
-    wdt_reset();
 #endif
 
 #ifdef DEBUG

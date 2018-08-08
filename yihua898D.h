@@ -205,6 +205,8 @@ typedef struct CNTRL_STATE {
   uint32_t heater_start_time;
   
   uint16_t adc_raw;
+
+  uint8_t enabled;
 } CNTRL_STATE;
 
 void change_config_parameter(CPARAM * param, const char *string, uint8_t disp);
