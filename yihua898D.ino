@@ -69,7 +69,7 @@
 #include <stdint.h>
 #include <EEPROM.h>
 #include "TM1628.h"
-#include "youyue858d.h"
+#include "yihua898D.h"
 
 #ifdef USE_WATCHDOG
 /* allocate memory for a signature string which will be stored in RAM after
