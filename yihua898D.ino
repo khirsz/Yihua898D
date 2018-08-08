@@ -244,6 +244,11 @@ void loop() {
     if (ha_state.enabled)
     {
       ha_state.adc_raw = analogRead(HA_TEMP_PIN); // need raw value later, store it here and avoid 2nd ADC read
+#ifdef DEBUG
+      Serial.print("HA adc=");
+      Serial.print(ha_state.adc_raw);
+      Serial.println();
+#endif
   
       ha_state.temp_inst = ha_state.adc_raw + ha_cfg.temp_offset_corr.value;  // approx. temp in °C
   
