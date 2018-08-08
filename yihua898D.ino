@@ -96,7 +96,7 @@ HA_CFG ha_cfg = {
 #ifdef CURRENT_SENSE_MOD
   /* fan_current_min */  { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 22, 23 },
   /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25 },
-#else
+#elif SPEED_SENSE_MOD
   //
   // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
@@ -350,7 +350,7 @@ void loop() {
 #ifdef CURRENT_SENSE_MOD
 				change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
 				change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
-#else
+#elif SPEED_SENSE_MOD
 				change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
 				change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
 #endif
@@ -499,10 +499,12 @@ void setup_HW(void)
 			delay(500);
 #ifdef CURRENT_SENSE_MOD
 			fan = analogRead(A2);
-#else				//CURRENT_SENSE_MOD
+      tm1628.showNum(DISP_2,fan);
+#elif SPEED_SENSE_MOD
 			fan = analogRead(A5);
+      tm1628.showNum(DISP_2,fan);
 #endif				//CURRENT_SENSE_MOD
-			tm1628.showNum(DISP_2,fan);
+			
 		}
 	}
 }
@@ -522,7 +524,7 @@ void load_cfg(void)
 #ifdef CURRENT_SENSE_MOD
 	eep_load(&ha_cfg.fan_current_min);
 	eep_load(&ha_cfg.fan_current_max);
-#else
+#elif SPEED_SENSE_MOD
 	eep_load(&ha_cfg.fan_speed_min);
 	eep_load(&ha_cfg.fan_speed_max);
 #endif
@@ -617,7 +619,7 @@ void restore_default_conf(void)
 #ifdef CURRENT_SENSE_MOD
 	ha_cfg.fan_current_min.value = ha_cfg.fan_current_min.value_default;
 	ha_cfg.fan_current_max.value = ha_cfg.fan_current_max.value_default;
-#else
+#elif SPEED_SENSE_MOD
 	ha_cfg.fan_speed_min.value = ha_cfg.fan_speed_min.value_default;
 	ha_cfg.fan_speed_max.value = ha_cfg.fan_speed_max.value_default;
 #endif
@@ -635,7 +637,7 @@ void restore_default_conf(void)
 #ifdef CURRENT_SENSE_MOD
 	eep_save(&ha_cfg.fan_current_min);
 	eep_save(&ha_cfg.fan_current_max);
-#else
+#elif SPEED_SENSE_MOD
 	eep_save(&ha_cfg.fan_speed_min);
 	eep_save(&ha_cfg.fan_speed_max);
 #endif
@@ -702,34 +704,37 @@ void fan_test(void)
 	fan_current = analogRead(A2);
 
 	if ((fan_current < (uint16_t) (ha_cfg.fan_current_min.value)) || (fan_current > (uint16_t) (ha_cfg.fan_current_max.value))) {
-#else				//CURRENT_SENSE_MOD
+  	// the fan is not working as it should
+		FAN_OFF;
+		while (1) {
+			tm1628.showStr(DISP_2,"FAn");
+			delay(1000);
+      tm1628.showStr(DISP_2,"cur");
+			delay(2000);
+			tm1628.clear(DISP_2);
+			delay(1000);
+#ifdef DEBUG
+      Serial.println("Fan current meas. error!");
+      break;
+#endif
+#elif SPEED_SENSE_MOD				
 	uint16_t fan_speed;
 	FAN_ON;
 	delay(3000);
 	fan_speed = analogRead(A5);
 
 	if ((fan_speed < (uint16_t) (ha_cfg.fan_speed_min.value)) || (fan_speed > (uint16_t) (ha_cfg.fan_speed_max.value))) {
-#endif				//CURRENT_SENSE_MOD
 		// the fan is not working as it should
 		FAN_OFF;
 		while (1) {
 			tm1628.showStr(DISP_2,"FAn");
 			delay(1000);
-#ifdef CURRENT_SENSE_MOD
-			tm1628.showStr(DISP_2,"cur");
-#ifdef DEBUG
-      Serial.println("Fan current meas. error!");
-#endif
-#else				//CURRENT_SENSE_MOD
 			tm1628.showStr(DISP_2,"SPd");
-#ifdef DEBUG
-      Serial.println("Fan speed meas. error!");
-#endif
-#endif				//CURRENT_SENSE_MOD
 			delay(2000);
 			tm1628.clear(DISP_2);
 			delay(1000);
 #ifdef DEBUG
+      Serial.println("Fan speed meas. error!");
       break;
 #endif
 		}
