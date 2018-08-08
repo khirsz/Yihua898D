@@ -16,8 +16,9 @@
  *
  */
 
-include "Arduino.h"
- 
+#include "Arduino.h"
+#include "TM1628.h"
+
  
 #define DEBUG
 
@@ -45,7 +46,7 @@ include "Arduino.h"
 #define SI_HEATER_ON      digitalWrite(SI_HEATER_PIN, HIGH)
 #define SI_HEATER_OFF     digitalWrite(SI_HEATER_PIN, LOW)
 
-#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
+//#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
 
 
 #define HA_TEMP_PIN       A0
@@ -53,7 +54,7 @@ include "Arduino.h"
 
 #ifdef CURRENT_SENSE_MOD
 #define FAN_CURRENT_PIN   A2
-#elif
+#elif SPEED_SENSE_MOD
 #define FAN_SPEED_PIN     A2
 #endif
 
@@ -161,7 +162,7 @@ typedef struct HA_CFG {
 #ifdef CURRENT_SENSE_MOD
   CPARAM fan_current_min;
   CPARAM fan_current_max;
-#else
+#elif SPEED_SENSE_MOD
   //
   // See 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
@@ -204,17 +205,17 @@ typedef struct CNTRL_STATE {
   uint32_t heater_start_time;
   
   uint16_t adc_raw;
-} DEV_STATE;
+} CNTRL_STATE;
 
 void change_config_parameter(CPARAM * param, const char *string, uint8_t disp);
 void clear_eeprom_saved_dot(uint8_t disp);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
 void fan_test(void);
-int main(void);
 void restore_default_conf(void);
 void set_eeprom_saved_dot(uint8_t disp);
 void setup_HW(void);
+void load_cfg(void);
 void show_firmware_version(void);
 #ifdef USE_WATCHDOG
 void watchdog_off(void);
@@ -222,6 +223,7 @@ void watchdog_on(void);
 uint8_t watchdog_check(void);
 void test_F_CPU_with_watchdog(void);
 #endif
+void key_scann(void);
 uint8_t get_key_press(uint8_t key_mask);
 uint8_t get_key_rpt(uint8_t key_mask);
 uint8_t get_key_state(uint8_t key_mask);
