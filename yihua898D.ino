@@ -218,6 +218,9 @@ void loop() {
       if (HA_SW_ON)
       {
         ha_state.enabled = 1;
+#ifdef DEBUG
+        Serial.println("HA on!");
+#endif
         fan_test();
       }      
     } else if (ha_state.enabled && HA_SW_OFF) 
@@ -229,6 +232,12 @@ void loop() {
       if (HA_SW_OFF)
       {
         ha_state.enabled = 0;
+        HA_HEATER_OFF;
+        FAN_OFF;
+#ifdef DEBUG
+        Serial.println("HA off!");
+#endif
+        tm1628.clear(DISP_2);
       } 
     }
 
@@ -456,6 +465,12 @@ void loop() {
       }
   
       tm1628.update();
+      
+#ifdef DEBUG
+      int32_t stop_time = micros();
+      Serial.print("Loop time: ");
+      Serial.println(stop_time - start_time);
+#endif
     }
 
 #if defined(WATCHDOG_TEST) && defined(USE_WATCHDOG)
@@ -463,12 +478,6 @@ void loop() {
     if (ha_state.temp_average > 100) {
       delay(150);
     }
-#endif
-
-#ifdef DEBUG
-    int32_t stop_time = micros();
-    Serial.print("Loop time: ");
-    Serial.println(stop_time - start_time);
 #endif
 }
 
@@ -703,7 +712,9 @@ void clear_eeprom_saved_dot(uint8_t disp)
 void fan_test(void)
 {
   HA_HEATER_OFF;
-
+#ifdef USE_WATCHDOG
+  watchdog_off();
+#endif
   // if the wand is not in the cradle when powered up, go into a safe mode
   // and display an error
   while (!REEDSW_CLOSED) {
@@ -766,7 +777,9 @@ void fan_test(void)
 #endif
 
   FAN_OFF;
-
+#ifdef USE_WATCHDOG
+  watchdog_on();
+#endif
 }
 
 void show_firmware_version(void)
