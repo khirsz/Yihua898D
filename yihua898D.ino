@@ -96,6 +96,7 @@ HA_CFG ha_cfg = {
 #endif
 };
 
+//TODO clear state after switch off
 CNTRL_STATE ha_state = {
   /* temp_inst                 */   0,
   /* temp_accu                 */   0,
@@ -172,7 +173,7 @@ void setup()
   if (watchdog_check()) 
   {
     // there was a watchdog reset - should never ever happen
-    HA_HEATER_OFF;
+    HEATERS_OFF;
     FAN_ON;
 #ifdef DEBUG
     Serial.println("WDT reset!");
@@ -282,6 +283,7 @@ void HA_cntrl(void)
     // pid loop / heater handling
     if (ha_cfg.fan_only.value == 1 || REEDSW_CLOSED) {
       HA_HEATER_OFF;
+      //TODO
       ha_state.heater_start_time = millis();
       tm1628.clearDot(DISP_2,0);
     } else if (REEDSW_OPEN && (ha_cfg.temp_setpoint.value >= ha_cfg.temp_setpoint.value_min)
@@ -343,15 +345,16 @@ void HA_cntrl(void)
       temp_avg_ctr = 0;
     }
     // fan/cradle handling
-    if (ha_state.temp_average >= FAN_ON_TEMP) {
+    if (REEDSW_OPEN) {
+      FAN_ON;
+    } else if (ha_state.temp_average >= FAN_ON_TEMP) {
       FAN_ON;
     } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 1 && (ha_state.temp_average <= FAN_OFF_TEMP_FANONLY)) {
       FAN_OFF;
     } else if (REEDSW_CLOSED && ha_cfg.fan_only.value == 0 && (ha_state.temp_average <= FAN_OFF_TEMP)) {
       FAN_OFF;
-    } else if (REEDSW_OPEN) {
-      FAN_ON;
     }
+    
     // menu key handling
     if (get_key_short(KEY_UP)) {
       button_input_time = millis();

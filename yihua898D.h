@@ -46,7 +46,7 @@
 #define SI_HEATER_ON      digitalWrite(SI_HEATER_PIN, HIGH)
 #define SI_HEATER_OFF     digitalWrite(SI_HEATER_PIN, LOW)
 
-//#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
+#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
 
 
 #define HA_TEMP_PIN       A0
@@ -79,8 +79,8 @@
 
 #define SHOW_SETPOINT_TIMEOUT 2000L
 
-#define HEATER_DUTY_CYCLE_MAX 512L
 #define PWM_CYCLES 512L
+#define HEATER_DUTY_CYCLE_MAX PWM_CYCLES
 
 #define P_GAIN_DEFAULT 650
 #define I_GAIN_DEFAULT 15
