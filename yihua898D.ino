@@ -108,8 +108,6 @@ CNTRL_STATE ha_state = {
   /* error_accu                */   0,
   /* velocity                  */   0,
   /* PID_drive                 */   0,
-  /* temp_setpoint_saved       */   1,
-  /* temp_setpoint_saved_time  */   0,
   /* heater_start_time         */   0,
   /* adc_raw                   */   0,
   /* enabled                   */   0,
@@ -139,17 +137,14 @@ CNTRL_STATE si_state = {
   /* error_accu                */   0,
   /* velocity                  */   0,
   /* PID_drive                 */   0,
-  /* temp_setpoint_saved       */   1,
-  /* temp_setpoint_saved_time  */   0,
   /* heater_start_time         */   0,
   /* adc_raw                   */   0,
   /* enabled                   */   0,
 };
 
 volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: key pressed
-volatile uint8_t key_state_l = 0; // key long press and repeat
-
-volatile uint8_t display_blink;
+volatile uint8_t key_state_l = 0; // key long press
+volatile uint8_t key_state_s = 0; // key short press
 
 void setup()
 {
@@ -220,6 +215,7 @@ void loop() {
 #endif
 
     HA_cntrl();
+    UI_hndl();
 }
 
 void HA_cntrl(void)
@@ -396,47 +392,85 @@ void HA_cntrl(void)
 
 void UI_hndl(void)
 {
-  static int32_t button_input_time = 0;
   static uint8_t sp_mode = 0;
+  static uint32_t blink_time = millis();
+  static uint8_t blink_state = 0;
+
+  // Blinking feature
+  if (millis() - blink_time > BLINK_CYCLE) {
+    blink_time = millis();
+    if (++blink_state > BLINK_STATE_MAX) {
+      blink_state = 0;
+    }
+  }
+  
   // menu key handling
-  if (!sp_mode get_key_short(KEY_ENTER)) {
+  if (!sp_mode && get_key_short(KEY_ENTER)) {
     sp_mode = 1;
+  } else if (sp_mode && get_key_short(KEY_ENTER)) {
+    sp_mode = 0;
+    eep_save(&ha_cfg.temp_setpoint);
+    eep_save(&ha_cfg.fan_only);
   }
   
   if (sp_mode) {
-  if (get_key_short(KEY_UP)) {
-    button_input_time = millis();
-    if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
-      ha_cfg.temp_setpoint.value++;
+    if (get_key_short(KEY_UP)) {
+      if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
+        ha_cfg.temp_setpoint.value++;
+      }
+    } else if (get_key_short(KEY_DOWN)) {
+      if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
+        ha_cfg.temp_setpoint.value--;
+      }
+    } else if (get_key_long(KEY_UP)) {
+      if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
+        ha_cfg.temp_setpoint.value += 10;
+      } else {
+        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
+      }
+  
+    } else if (get_key_long(KEY_DOWN)) {
+  
+      if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
+        ha_cfg.temp_setpoint.value -= 10;
+      } else {
+        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
+      }
+    } else if (get_key_long(KEY_UP | KEY_DOWN)) {// Fan only mode
+      ha_cfg.fan_only.value ^= 0x01;
     }
-    ha_state.temp_setpoint_saved = 0;
-  } else if (get_key_short(KEY_DOWN)) {
-    button_input_time = millis();
-    if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
-      ha_cfg.temp_setpoint.value--;
-    }
-    ha_state.temp_setpoint_saved = 0;
-  } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
-    button_input_time = millis();
-    if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
-      ha_cfg.temp_setpoint.value += 10;
+    
+    // Display
+    if (blink_state > 7) {
+      tm1628.clear(DISP_2);
     } else {
-      ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
+      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
     }
-    ha_state.temp_setpoint_saved = 0;
-
-  } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
-    button_input_time = millis();
-
-    if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
-      ha_cfg.temp_setpoint.value -= 10;
+  } else {
+    //Normal operation display
+    if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
+      if (ha_cfg.fan_only.value == 1) {
+        tm1628.showStr(DISP_2,"FAn");
+      } else {
+        tm1628.showStr(DISP_2,"---");
+      }
+    } else if (ha_cfg.fan_only.value == 1) {
+      if (blink_state < 5) {
+        tm1628.showStr(DISP_2,"FAn");
+      } else {
+        tm1628.showNum(DISP_2,ha_state.temp_average);
+      }
+    } else if (ha_cfg.display_adc_raw.value == 1) {
+      tm1628.showNum(DISP_2,ha_state.adc_raw);
+    } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
+      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
     } else {
-      ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
+      tm1628.showNum(DISP_2,ha_state.temp_average);
     }
-
-    ha_state.temp_setpoint_saved = 0;
+  }
+  
   // Configuration mode
-  } else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
+  /*if (get_key_long(KEY_UP | KEY_DOWN)) {
     HEATERS_OFF;  // security reasons, delay below!
 #ifdef USE_WATCHDOG
     watchdog_off();
@@ -470,46 +504,7 @@ void UI_hndl(void)
 #ifdef USE_WATCHDOG
     watchdog_on();
 #endif
-  }
-  
-  // display output
-  if ((millis() - button_input_time) < SHOW_SETPOINT_TIMEOUT) {
-    if (display_blink < 5) {
-      tm1628.clear(DISP_2);
-    } else {
-      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
-    }
-  } else {
-    if (ha_state.temp_setpoint_saved == 0) {
-      set_eeprom_saved_dot(DISP_2);
-      eep_save(&ha_cfg.temp_setpoint);
-      eep_save(&ha_cfg.fan_only);
-      ha_state.temp_setpoint_saved_time = millis();
-      ha_state.temp_setpoint_saved = 1;
-    } else if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
-      if (ha_cfg.fan_only.value == 1) {
-        tm1628.showStr(DISP_2,"FAn");
-      } else {
-        tm1628.showStr(DISP_2,"---");
-      }
-    } else if (ha_cfg.fan_only.value == 1) {
-      if (display_blink < 20) {
-        tm1628.showStr(DISP_2,"FAn");
-      } else {
-        tm1628.showNum(DISP_2,ha_state.temp_average);
-      }
-    } else if (ha_cfg.display_adc_raw.value == 1) {
-      tm1628.showNum(DISP_2,ha_state.adc_raw);
-    } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
-      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
-    } else {
-      tm1628.showNum(DISP_2,ha_state.temp_average);
-    }
-  }
-
-  if ((millis() - ha_state.temp_setpoint_saved_time) > 500) {
-    clear_eeprom_saved_dot(DISP_2);
-  } 
+  }*/
 }
 
 void setup_HW(void)
@@ -621,24 +616,21 @@ void change_config_parameter(CPARAM * param, const char *string, uint8_t disp)
       if (param->value > param->value_min) {
         param->value--;
       }
-    } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
+    } else if (get_key_long(KEY_UP)) {
       if (param->value < param->value_max - 10) {
         param->value += 10;
       }
-    } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
+    } else if (get_key_long(KEY_DOWN)) {
       if (param->value > param->value_min + 10) {
         param->value -= 10;
       }
-    } else if (get_key_common(KEY_UP | KEY_DOWN)) {
+    } else if (get_key_short(KEY_UP | KEY_DOWN)) {
       loop = 0;
     }
 
     tm1628.showNum(disp,param->value);
   }
-  set_eeprom_saved_dot(disp);
   eep_save(param);
-  delay(1000);
-  clear_eeprom_saved_dot(disp);
 }
 
 void eep_save(CPARAM * param)
@@ -726,18 +718,6 @@ void restore_default_conf(void)
   eep_save(&si_cfg.temp_averages);
   eep_save(&si_cfg.slp_timeout);
   eep_save(&si_cfg.display_adc_raw);
-}
-
-void set_eeprom_saved_dot(uint8_t disp)
-{
-  tm1628.setDot(disp,1);  // dig1.dot
-  tm1628.update();
-}
-
-void clear_eeprom_saved_dot(uint8_t disp)
-{
-  tm1628.clearDot(disp,1);  // dig1.dot
-  tm1628.update();
 }
 
 void fan_test(void)
@@ -838,9 +818,20 @@ void show_firmware_version(void)
 void key_scan(void)
 {  
   static uint32_t long_press_scan_time = millis();
-  static old_key_state = 0;
+  static uint8_t key_state_bounce = 0;
+  static uint8_t old_key_state = 0;
+  uint8_t new_key_state;
 
-  key_state = tm1628.getButtons();
+  new_key_state = tm1628.getButtons();
+#ifdef DEBUG
+  if (key_state ^ new_key_state) {
+    Serial.print("BT = 0x");
+    Serial.println(new_key_state,HEX);
+  }
+#endif
+  //key_state = new_key_state & key_state_bounce;
+  //key_state_bounce = new_key_state;
+  key_state = new_key_state;
   
   if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
   {
@@ -849,12 +840,6 @@ void key_scan(void)
     key_state_s = (old_key_state ^ key_state) & old_key_state;
     old_key_state = key_state;
   }
-
-  key_state = tm1628.getButtons();
-  
-  //TODO
-  if (++display_blink > 50)
-    display_blink = 0;
 }
 
 ///////////////////////////////////////////////////////////////////

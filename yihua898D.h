@@ -46,7 +46,7 @@
 #define SI_HEATER_ON      digitalWrite(SI_HEATER_PIN, HIGH)
 #define SI_HEATER_OFF     digitalWrite(SI_HEATER_PIN, LOW)
 
-#define HEATERS_OFF       (HA_HEATER_OFF; SI_HEATER_OFF;)
+#define HEATERS_OFF       HA_HEATER_OFF; SI_HEATER_OFF;
 
 
 #define HA_TEMP_PIN       A0
@@ -73,9 +73,9 @@
 #define SI_SW_ON         (!digitalRead(SI_SW_PIN))
 #define SI_SW_OFF        digitalRead(SI_SW_PIN)
 
-#define BUTTON_SCANN_CYCLE   100
-
 #define LED_POW   2
+#define BLINK_CYCLE       75
+#define BLINK_STATE_MAX   10
 
 #define SHOW_SETPOINT_TIMEOUT 2000L
 
@@ -128,15 +128,12 @@
 
 #define SLP_TIMEOUT_DEFAULT 10
 
+#define BUTTON_SCANN_CYCLE        100
+#define LONG_PRESS_SCANN_CYCLE    200
+
 #define KEY_UP          BT_UP
 #define KEY_DOWN        BT_DW
 #define KEY_ENTER       BT_EN
-#define ALL_KEYS        (KEY_DOWN | KEY_UP | KEY_ENTER)
-
-#define REPEAT_MASK     (KEY_DOWN | KEY_UP)
-#define REPEAT_START    5	// after 5*100ms = 500ms
-#define REPEAT_NEXT     1	// every 1*100ms = 100ms
-
 
 typedef struct CPARAM {
 	int16_t value_min;
@@ -199,9 +196,6 @@ typedef struct CNTRL_STATE {
   int16_t velocity;
   float PID_drive;
   
-  uint8_t temp_setpoint_saved;
-  int32_t temp_setpoint_saved_time;
-  
   uint32_t heater_start_time;
   
   uint16_t adc_raw;
@@ -210,13 +204,12 @@ typedef struct CNTRL_STATE {
 } CNTRL_STATE;
 
 void HA_cntrl(void);
+void UI_hndl(void);
 void change_config_parameter(CPARAM * param, const char *string, uint8_t disp);
-void clear_eeprom_saved_dot(uint8_t disp);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
 void fan_test(void);
 void restore_default_conf(void);
-void set_eeprom_saved_dot(uint8_t disp);
 void setup_HW(void);
 void load_cfg(void);
 void show_firmware_version(void);
@@ -227,14 +220,8 @@ uint8_t watchdog_check(void);
 void test_F_CPU_with_watchdog(void);
 #endif
 void key_scan(void);
-uint8_t get_key_press(uint8_t key_mask);
-uint8_t get_key_rpt(uint8_t key_mask);
 uint8_t get_key_state(uint8_t key_mask);
 uint8_t get_key_short(uint8_t key_mask);
 uint8_t get_key_long(uint8_t key_mask);
-uint8_t get_key_long_r(uint8_t key_mask);
-uint8_t get_key_rpt_l(uint8_t key_mask);
-uint8_t get_key_common(uint8_t key_mask);
-uint8_t get_key_common_l(uint8_t key_mask);
 
 #endif				// YIHUA898D_h
