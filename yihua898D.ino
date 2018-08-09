@@ -147,8 +147,7 @@ CNTRL_STATE si_state = {
 };
 
 volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: key pressed
-volatile uint8_t key_press = 0; // key press detect
-volatile uint8_t key_rpt = 0; // key long press and repeat
+volatile uint8_t key_state_l = 0; // key long press and repeat
 
 volatile uint8_t display_blink;
 
@@ -199,16 +198,16 @@ void setup()
 }
 
 void loop() {
-    static int32_t button_scann_time = 0;
+    static int32_t button_scan_time = 0;
 
 #ifdef USE_WATCHDOG
     wdt_reset();
 #endif
 
-    if (millis() - button_scann_time > BUTTON_SCANN_CYCLE)
+    if (millis() - button_scan_time > BUTTON_SCANN_CYCLE)
     {
-      key_scann();
-      button_scann_time = millis();
+      key_scan();
+      button_scan_time = millis();
     }
 
     tm1628.update();  
@@ -225,8 +224,6 @@ void loop() {
 
 void HA_cntrl(void)
 {
-  static int32_t button_input_time = 0;
-
 #ifdef DEBUG
   int32_t start_time = micros();
 #endif
@@ -355,73 +352,6 @@ void HA_cntrl(void)
       FAN_OFF;
     }
     
-    // menu key handling
-    if (get_key_short(KEY_UP)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
-        ha_cfg.temp_setpoint.value++;
-      }
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_short(KEY_DOWN)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
-        ha_cfg.temp_setpoint.value--;
-      }
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
-      button_input_time = millis();
-      if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
-        ha_cfg.temp_setpoint.value += 10;
-      } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
-      }
-      ha_state.temp_setpoint_saved = 0;
-
-    } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
-      button_input_time = millis();
-
-      if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
-        ha_cfg.temp_setpoint.value -= 10;
-      } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
-      }
-
-      ha_state.temp_setpoint_saved = 0;
-    } else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
-      HA_HEATER_OFF;  // security reasons, delay below!
-#ifdef USE_WATCHDOG
-      watchdog_off();
-#endif
-      delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
-      if (get_key_long_r(KEY_UP | KEY_DOWN)) {
-        change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
-        change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
-        change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
-        change_config_parameter(&ha_cfg.i_thresh, "ItH", DISP_2);
-        change_config_parameter(&ha_cfg.temp_offset_corr, "toF", DISP_2);
-        change_config_parameter(&ha_cfg.temp_averages, "Avg", DISP_2);
-        change_config_parameter(&ha_cfg.slp_timeout, "SLP", DISP_2);
-        change_config_parameter(&ha_cfg.display_adc_raw, "Adc", DISP_2);
-#ifdef CURRENT_SENSE_MOD
-        change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
-        change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
-#elif SPEED_SENSE_MOD
-        change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
-        change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
-#endif
-      } else {
-        get_key_press(KEY_UP | KEY_DOWN); // clear inp state
-        ha_cfg.fan_only.value ^= 0x01;
-        ha_state.temp_setpoint_saved = 0;
-        if (ha_cfg.fan_only.value == 0) {
-          button_input_time = millis(); // show set temp after disabling fan only mode
-        }
-        display_blink = 0;  // make sure we start displaying "FAn" or set temp
-      }
-#ifdef USE_WATCHDOG
-      watchdog_on();
-#endif
-    }
     // security first!
     if (ha_state.temp_average >= MAX_TEMP_ERR) {
       // something might have gone terribly wrong
@@ -452,44 +382,6 @@ void HA_cntrl(void)
         delay(1000);
       }
     }
-    // display output
-    if ((millis() - button_input_time) < SHOW_SETPOINT_TIMEOUT) {
-      if (display_blink < 5) {
-        tm1628.clear(DISP_2);
-      } else {
-        tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
-      }
-    } else {
-      if (ha_state.temp_setpoint_saved == 0) {
-        set_eeprom_saved_dot(DISP_2);
-        eep_save(&ha_cfg.temp_setpoint);
-        eep_save(&ha_cfg.fan_only);
-        ha_state.temp_setpoint_saved_time = millis();
-        ha_state.temp_setpoint_saved = 1;
-      } else if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
-        if (ha_cfg.fan_only.value == 1) {
-          tm1628.showStr(DISP_2,"FAn");
-        } else {
-          tm1628.showStr(DISP_2,"---");
-        }
-      } else if (ha_cfg.fan_only.value == 1) {
-        if (display_blink < 20) {
-          tm1628.showStr(DISP_2,"FAn");
-        } else {
-          tm1628.showNum(DISP_2,ha_state.temp_average);
-        }
-      } else if (ha_cfg.display_adc_raw.value == 1) {
-        tm1628.showNum(DISP_2,ha_state.adc_raw);
-      } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
-        tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
-      } else {
-        tm1628.showNum(DISP_2,ha_state.temp_average);
-      }
-    }
-
-    if ((millis() - ha_state.temp_setpoint_saved_time) > 500) {
-      clear_eeprom_saved_dot(DISP_2);
-    } 
     
 #ifdef DEBUG
     int32_t stop_time = micros();
@@ -500,6 +392,124 @@ void HA_cntrl(void)
     }
 #endif
   }
+}
+
+void UI_hndl(void)
+{
+  static int32_t button_input_time = 0;
+  static uint8_t sp_mode = 0;
+  // menu key handling
+  if (!sp_mode get_key_short(KEY_ENTER)) {
+    sp_mode = 1;
+  }
+  
+  if (sp_mode) {
+  if (get_key_short(KEY_UP)) {
+    button_input_time = millis();
+    if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
+      ha_cfg.temp_setpoint.value++;
+    }
+    ha_state.temp_setpoint_saved = 0;
+  } else if (get_key_short(KEY_DOWN)) {
+    button_input_time = millis();
+    if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
+      ha_cfg.temp_setpoint.value--;
+    }
+    ha_state.temp_setpoint_saved = 0;
+  } else if (get_key_long_r(KEY_UP) || get_key_rpt_l(KEY_UP)) {
+    button_input_time = millis();
+    if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
+      ha_cfg.temp_setpoint.value += 10;
+    } else {
+      ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
+    }
+    ha_state.temp_setpoint_saved = 0;
+
+  } else if (get_key_long_r(KEY_DOWN) || get_key_rpt_l(KEY_DOWN)) {
+    button_input_time = millis();
+
+    if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
+      ha_cfg.temp_setpoint.value -= 10;
+    } else {
+      ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
+    }
+
+    ha_state.temp_setpoint_saved = 0;
+  // Configuration mode
+  } else if (get_key_common_l(KEY_UP | KEY_DOWN)) {
+    HEATERS_OFF;  // security reasons, delay below!
+#ifdef USE_WATCHDOG
+    watchdog_off();
+#endif
+    delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
+    if (get_key_long_r(KEY_UP | KEY_DOWN)) {
+      change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
+      change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
+      change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
+      change_config_parameter(&ha_cfg.i_thresh, "ItH", DISP_2);
+      change_config_parameter(&ha_cfg.temp_offset_corr, "toF", DISP_2);
+      change_config_parameter(&ha_cfg.temp_averages, "Avg", DISP_2);
+      change_config_parameter(&ha_cfg.slp_timeout, "SLP", DISP_2);
+      change_config_parameter(&ha_cfg.display_adc_raw, "Adc", DISP_2);
+#ifdef CURRENT_SENSE_MOD
+      change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
+      change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
+#elif SPEED_SENSE_MOD
+      change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
+      change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
+#endif
+    } else {
+      get_key_press(KEY_UP | KEY_DOWN); // clear inp state
+      ha_cfg.fan_only.value ^= 0x01;
+      ha_state.temp_setpoint_saved = 0;
+      if (ha_cfg.fan_only.value == 0) {
+        button_input_time = millis(); // show set temp after disabling fan only mode
+      }
+      display_blink = 0;  // make sure we start displaying "FAn" or set temp
+    }
+#ifdef USE_WATCHDOG
+    watchdog_on();
+#endif
+  }
+  
+  // display output
+  if ((millis() - button_input_time) < SHOW_SETPOINT_TIMEOUT) {
+    if (display_blink < 5) {
+      tm1628.clear(DISP_2);
+    } else {
+      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
+    }
+  } else {
+    if (ha_state.temp_setpoint_saved == 0) {
+      set_eeprom_saved_dot(DISP_2);
+      eep_save(&ha_cfg.temp_setpoint);
+      eep_save(&ha_cfg.fan_only);
+      ha_state.temp_setpoint_saved_time = millis();
+      ha_state.temp_setpoint_saved = 1;
+    } else if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
+      if (ha_cfg.fan_only.value == 1) {
+        tm1628.showStr(DISP_2,"FAn");
+      } else {
+        tm1628.showStr(DISP_2,"---");
+      }
+    } else if (ha_cfg.fan_only.value == 1) {
+      if (display_blink < 20) {
+        tm1628.showStr(DISP_2,"FAn");
+      } else {
+        tm1628.showNum(DISP_2,ha_state.temp_average);
+      }
+    } else if (ha_cfg.display_adc_raw.value == 1) {
+      tm1628.showNum(DISP_2,ha_state.adc_raw);
+    } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
+      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
+    } else {
+      tm1628.showNum(DISP_2,ha_state.temp_average);
+    }
+  }
+
+  if ((millis() - ha_state.temp_setpoint_saved_time) > 500) {
+    clear_eeprom_saved_dot(DISP_2);
+  } 
 }
 
 void setup_HW(void)
@@ -539,7 +549,7 @@ void setup_HW(void)
 #endif
   }
   
-  key_scann();
+  key_scan();
 
   if (get_key_state(KEY_DOWN) && get_key_state(KEY_UP)) {
     restore_default_conf();
@@ -825,57 +835,26 @@ void show_firmware_version(void)
   tm1628.clear(DISP_ALL);
 }
 
-void key_scann(void)
+void key_scan(void)
 {  
-  static uint8_t rpt;
-  uint8_t new_key_state;
+  static uint32_t long_press_scan_time = millis();
+  static old_key_state = 0;
 
-  new_key_state = tm1628.getButtons();
-  key_press |= key_state ^ new_key_state;
-  key_state = new_key_state; 
-  //TODO  
-  //key_press &= key_state; // Remove old key press events
-    
-  if ((key_state & REPEAT_MASK) == 0) // check repeat function
-    rpt = REPEAT_START; // start delay
-  if (--rpt == 0) {
-    rpt = REPEAT_NEXT;  // repeat delay
-    key_rpt |= key_state & REPEAT_MASK;
-  }
+  key_state = tm1628.getButtons();
   
+  if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
+  {
+    long_press_scan_time = millis();
+    key_state_l = old_key_state & key_state;
+    key_state_s = (old_key_state ^ key_state) & old_key_state;
+    old_key_state = key_state;
+  }
+
+  key_state = tm1628.getButtons();
+  
+  //TODO
   if (++display_blink > 50)
     display_blink = 0;
-}
-
-///////////////////////////////////////////////////////////////////
-//
-// check if a key has been pressed. Each pressed key is reported
-// only once
-//
-uint8_t get_key_press(uint8_t key_mask)
-{
-  cli();      // read and clear atomic !
-  key_mask &= key_press;  // read key(s)
-  key_press ^= key_mask;  // clear key(s)
-  sei();
-  return key_mask;
-}
-
-///////////////////////////////////////////////////////////////////
-//
-// check if a key has been pressed long enough such that the
-// key repeat functionality kicks in. After a small setup delay
-// the key is reported being pressed in subsequent calls
-// to this function. This simulates the user repeatedly
-// pressing and releasing the key.
-//
-uint8_t get_key_rpt(uint8_t key_mask)
-{
-  cli();      // read and clear atomic !
-  key_mask &= key_rpt;  // read key(s)
-  key_rpt ^= key_mask;  // clear key(s)
-  sei();
-  return key_mask;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -892,35 +871,16 @@ uint8_t get_key_state(uint8_t key_mask)
 //
 uint8_t get_key_short(uint8_t key_mask)
 {
-  cli();      // read key state and key press atomic !
-  return get_key_press(~key_state & key_mask);
+  key_mask &= key_state_s;
+  return key_mask;
 }
 
 ///////////////////////////////////////////////////////////////////
 //
 uint8_t get_key_long(uint8_t key_mask)
 {
-  return get_key_press(get_key_rpt(key_mask));
-}
-
-uint8_t get_key_long_r(uint8_t key_mask)
-{       // if repeat function needed
-  return get_key_press(get_key_rpt(key_press & key_mask));
-}
-
-uint8_t get_key_rpt_l(uint8_t key_mask)
-{       // if long function needed
-  return get_key_rpt(~key_press & key_mask);
-}
-
-uint8_t get_key_common(uint8_t key_mask)
-{
-  return get_key_press((key_press & key_mask) == key_mask ? key_mask : 0);
-}
-
-uint8_t get_key_common_l(uint8_t key_mask)
-{
-  return get_key_state((key_press & key_mask) == key_mask ? key_mask : 0);
+  key_mask &= key_state_l;
+  return key_mask;
 }
 
 #ifdef USE_WATCHDOG

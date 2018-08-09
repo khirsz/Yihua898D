@@ -226,7 +226,7 @@ void watchdog_on(void);
 uint8_t watchdog_check(void);
 void test_F_CPU_with_watchdog(void);
 #endif
-void key_scann(void);
+void key_scan(void);
 uint8_t get_key_press(uint8_t key_mask);
 uint8_t get_key_rpt(uint8_t key_mask);
 uint8_t get_key_state(uint8_t key_mask);
