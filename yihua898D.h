@@ -221,7 +221,7 @@ void test_F_CPU_with_watchdog(void);
 #endif
 void key_scan(void);
 uint8_t get_key_state(uint8_t key_mask);
-uint8_t get_key_short(uint8_t key_mask);
-uint8_t get_key_long(uint8_t key_mask);
+uint8_t get_key_event_short(uint8_t key_mask);
+uint8_t get_key_event_long(uint8_t key_mask);
 
 #endif				// YIHUA898D_h

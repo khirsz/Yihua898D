@@ -405,44 +405,50 @@ void UI_hndl(void)
   }
   
   // menu key handling
-  if (!sp_mode && get_key_short(KEY_ENTER)) {
-    sp_mode = 1;
-  } else if (sp_mode && get_key_short(KEY_ENTER)) {
-    sp_mode = 0;
-    eep_save(&ha_cfg.temp_setpoint);
-    eep_save(&ha_cfg.fan_only);
+  if (get_key_event_short(KEY_ENTER)) {
+    if (!sp_mode) {
+      sp_mode = 1;
+    } else {
+      sp_mode = 0;
+      eep_save(&ha_cfg.temp_setpoint);
+      eep_save(&ha_cfg.fan_only);
+    }
   }
   
   if (sp_mode) {
-    if (get_key_short(KEY_UP)) {
+    if (get_key_event_short(KEY_UP | KEY_DOWN)) {// Fan only mode
+      ha_cfg.fan_only.value ^= 0x01;
+    } else if (get_key_event_short(KEY_UP)) {
       if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
         ha_cfg.temp_setpoint.value++;
       }
-    } else if (get_key_short(KEY_DOWN)) {
+    } else if (get_key_event_short(KEY_DOWN)) {
       if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
         ha_cfg.temp_setpoint.value--;
       }
-    } else if (get_key_long(KEY_UP)) {
+    } else if (get_key_event_long(KEY_UP)) {
       if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
         ha_cfg.temp_setpoint.value += 10;
       } else {
         ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
       }
   
-    } else if (get_key_long(KEY_DOWN)) {
+    } else if (get_key_event_long(KEY_DOWN)) {
   
       if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
         ha_cfg.temp_setpoint.value -= 10;
       } else {
         ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
       }
-    } else if (get_key_long(KEY_UP | KEY_DOWN)) {// Fan only mode
-      ha_cfg.fan_only.value ^= 0x01;
-    }
+    } 
     
     // Display
     if (blink_state > 7) {
-      tm1628.clear(DISP_2);
+      if (ha_cfg.fan_only.value == 1) {
+        tm1628.showStr(DISP_2,"FAn");
+      } else {
+        tm1628.clear(DISP_2);
+      }
     } else {
       tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
     }
@@ -470,13 +476,13 @@ void UI_hndl(void)
   }
   
   // Configuration mode
-  /*if (get_key_long(KEY_UP | KEY_DOWN)) {
+  /*if (get_key_event_long(KEY_UP | KEY_DOWN)) {
     HEATERS_OFF;  // security reasons, delay below!
 #ifdef USE_WATCHDOG
     watchdog_off();
 #endif
     delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
-    if (get_key_long_r(KEY_UP | KEY_DOWN)) {
+    if (get_key_event_long_r(KEY_UP | KEY_DOWN)) {
       change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
       change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
       change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
@@ -493,7 +499,7 @@ void UI_hndl(void)
       change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
 #endif
     } else {
-      get_key_press(KEY_UP | KEY_DOWN); // clear inp state
+      get_key_event_press(KEY_UP | KEY_DOWN); // clear inp state
       ha_cfg.fan_only.value ^= 0x01;
       ha_state.temp_setpoint_saved = 0;
       if (ha_cfg.fan_only.value == 0) {
@@ -608,25 +614,25 @@ void change_config_parameter(CPARAM * param, const char *string, uint8_t disp)
   uint8_t loop = 1;
 
   while (loop == 1) {
-    if (get_key_short(KEY_UP)) {
+    if (get_key_event_short(KEY_UP | KEY_DOWN)) {
+      loop = 0;
+    }else if (get_key_event_short(KEY_UP)) {
       if (param->value < param->value_max) {
         param->value++;
       }
-    } else if (get_key_short(KEY_DOWN)) {
+    } else if (get_key_event_short(KEY_DOWN)) {
       if (param->value > param->value_min) {
         param->value--;
       }
-    } else if (get_key_long(KEY_UP)) {
+    } else if (get_key_event_long(KEY_UP)) {
       if (param->value < param->value_max - 10) {
         param->value += 10;
       }
-    } else if (get_key_long(KEY_DOWN)) {
+    } else if (get_key_event_long(KEY_DOWN)) {
       if (param->value > param->value_min + 10) {
         param->value -= 10;
       }
-    } else if (get_key_short(KEY_UP | KEY_DOWN)) {
-      loop = 0;
-    }
+    } 
 
     tm1628.showNum(disp,param->value);
   }
@@ -818,8 +824,9 @@ void show_firmware_version(void)
 void key_scan(void)
 {  
   static uint32_t long_press_scan_time = millis();
-  static uint8_t key_state_bounce = 0;
+  
   static uint8_t old_key_state = 0;
+  static uint8_t key_state_change = 0;
   uint8_t new_key_state;
 
   new_key_state = tm1628.getButtons();
@@ -829,17 +836,24 @@ void key_scan(void)
     Serial.println(new_key_state,HEX);
   }
 #endif
-  //key_state = new_key_state & key_state_bounce;
-  //key_state_bounce = new_key_state;
+  //key_state_change |= ~key_state & new_key_state;
   key_state = new_key_state;
   
   if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
   {
     long_press_scan_time = millis();
-    key_state_l = old_key_state & key_state;
-    key_state_s = (old_key_state ^ key_state) & old_key_state;
+    key_state_change
+    new_key_state = key_state_l | (old_key_state & key_state); // new key state for long press
+    key_state_s |= (old_key_state & ~key_state);
+    key_state_l = new_key_state;    
     old_key_state = key_state;
-  }
+  } 
+#ifdef DEBUG
+  Serial.print("KeyS = 0x");
+  Serial.println(key_state_s,HEX);
+  Serial.print("KeyL = 0x");
+  Serial.println(key_state_l,HEX);
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -854,18 +868,24 @@ uint8_t get_key_state(uint8_t key_mask)
 
 ///////////////////////////////////////////////////////////////////
 //
-uint8_t get_key_short(uint8_t key_mask)
+uint8_t get_key_event_short(uint8_t key_mask)
 {
-  key_mask &= key_state_s;
-  return key_mask;
+  if ((key_state_s & key_mask) == key_mask) {
+    key_state_s &= ~key_mask;
+    return key_mask;
+  }
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////////
 //
-uint8_t get_key_long(uint8_t key_mask)
+uint8_t get_key_event_long(uint8_t key_mask)
 {
-  key_mask &= key_state_l;
-  return key_mask;
+  if ((key_state_l & key_mask) == key_mask) {
+    key_state_l &= ~key_mask;
+    return key_mask;
+  }
+  return 0;
 }
 
 #ifdef USE_WATCHDOG
