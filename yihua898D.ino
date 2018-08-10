@@ -437,7 +437,7 @@ void UI_hndl(void)
   
   if (!ha_state.enabled && !si_state.enabled) {
     // Nothing to do
-    return
+    return;
   }
   
   // menu key handling
@@ -507,13 +507,13 @@ void UI_hndl(void)
   
   //Normal operation display
   if (sp_mode == DEV_HA) {    
-    temperature_display(&si_cfg, &si_state);
+    temperature_display(&si_cfg, &si_state, blink_state);
   } else if (sp_mode == DEV_SI) {    
-    temperature_display(&ha_cfg, &ha_state);
+    temperature_display(&ha_cfg, &ha_state, blink_state);
   } else if (!sp_mode) {  
     // Not in sp mode
-    temperature_display(&ha_cfg, &ha_state);
-    temperature_display(&si_cfg, &si_state);
+    temperature_display(&ha_cfg, &ha_state, blink_state);
+    temperature_display(&si_cfg, &si_state, blink_state);
     
     // Configuration mode
     if (get_key_event_long(KEY_UP | KEY_DOWN)) {
@@ -522,7 +522,7 @@ void UI_hndl(void)
   }  
 }
 
-void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
+void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t blink_state)
 {
   if (!pDev_state->enabled) {
     return;
@@ -552,13 +552,14 @@ void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
 void config_mode(void)
 {
   uint32_t button_scan_time = 0;
+  uint32_t blink_time = millis();
   uint8_t blink_state = 0;
   uint8_t param_num = 0;
   uint8_t mode = 0;  
   uint8_t disp = 0;  
   uint8_t dev_type = DEV_HA;
   uint8_t param_max_num = 0;
-  CPARAM * pSet_order = NULL;
+  CPARAM ** pSet_order = NULL;
   
   HEATERS_OFF;  // security reasons, delay below!
 #ifdef USE_WATCHDOG
@@ -571,13 +572,13 @@ void config_mode(void)
     mode = 1;
     disp = ha_cfg.disp_n;
     param_max_num = NELEMS(ha_set_order);
-    pSet_order = ha_set_order;
+    pSet_order = (CPARAM **)&ha_set_order;
   } else if (!ha_state.enabled && si_state.enabled) {
     dev_type = DEV_SI;
     mode = 1;
     disp = si_cfg.disp_n;
     param_max_num = NELEMS(si_set_order);
-    pSet_order = si_set_order;
+    pSet_order = (CPARAM **)&si_set_order;
   } 
   
   while(1) 
@@ -657,7 +658,7 @@ void config_mode(void)
       } else if (get_key_event_short(KEY_DOWN)) {
         if (param_num) {
           param_num--;
-          tm1628.showStr(disp,pSet_order[param_num]->szName)
+          tm1628.showStr(disp,pSet_order[param_num]->szName);
         }
       }   
       // Display
@@ -683,7 +684,7 @@ void config_mode(void)
           pSet_order[param_num]->value -= 10;
         }
       } else if (get_key_event_short(KEY_UP | KEY_DOWN)) {
-        loop = 0;
+        mode = 1;
       }else if (get_key_event_short(KEY_UP)) {
         if (pSet_order[param_num]->value < pSet_order[param_num]->value_max) {
           pSet_order[param_num]->value++;

@@ -149,7 +149,7 @@ typedef struct CPARAM {
 	int16_t value;
 	uint8_t eep_addr_high;
 	uint8_t eep_addr_low;
-  char[4] szName;
+  char szName[4];
 } CPARAM;
 
 // HOT AIR/SOLDERING IRON configuration
@@ -204,7 +204,7 @@ typedef struct CNTRL_STATE {
 void HA_cntrl(void);
 void UI_hndl(void);
 void config_mode(void);
-void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state);
+void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t blink_state);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
 void fan_test(void);
@@ -222,6 +222,6 @@ void key_scan(void);
 uint8_t get_key_state(uint8_t key_mask);
 uint8_t get_key_event_short(uint8_t key_mask);
 uint8_t get_key_event_long(uint8_t key_mask);
-key_event_clear(void);
+void key_event_clear(void);
 
 #endif				// YIHUA898D_h
