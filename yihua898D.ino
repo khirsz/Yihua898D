@@ -72,7 +72,7 @@ char * p = (char *) malloc(sizeof(wdt_signature));
 TM1628 tm1628(8, 9, 7);
 
 // HOT AIR configuration
-HA_CFG ha_cfg = {
+DEV_CFG ha_cfg = {
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
@@ -123,7 +123,7 @@ CNTRL_STATE ha_state = {
 };
 
 // SOLDERING IRON configuration
-SI_CFG si_cfg = {
+DEV_CFG si_cfg = {
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
@@ -132,8 +132,20 @@ SI_CFG si_cfg = {
   /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 14, 15, "Avg"},
   /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 16, 17, "SLP"},
   /* display_adc_raw */  { 0, 1, 0, 0, 28, 29, "Adc"},
+#ifdef CURRENT_SENSE_MOD
+  /* fan_current_min */  CPARAM_NULL,
+  /* fan_current_max */  CPARAM_NULL,
+#elif SPEED_SENSE_MOD
+  //
+  // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
+  // The following 2 CPARAM lines need changes in that case
+  //
+  /* fan_speed_min */    CPARAM_NULL,
+  /* fan_speed_max */    CPARAM_NULL,
+#endif
   // Not configurable in setting change mode
   /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13, "SP"},
+  /* fan_only */         CPARAM_NULL,
 };
 char * const CPARAM si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
                                       &si_cfg.temp_offset_corr, &si_cfg.temp_averages, &si_cfg.slp_timeout, &si_cfg.display_adc_raw,};

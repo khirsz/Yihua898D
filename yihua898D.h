@@ -137,6 +137,8 @@
 
 #define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 
+#define CPARAM_NULL { 0, 0, 0, 0, 0, 0, ""}
+
 typedef struct CPARAM {
 	int16_t value_min;
 	int16_t value_max;
@@ -147,8 +149,8 @@ typedef struct CPARAM {
   char[4] szName;
 } CPARAM;
 
-// HOT AIR configuration
-typedef struct HA_CFG {
+// HOT AIR/SOLDERING IRON configuration
+typedef struct DEV_CFG {
   CPARAM p_gain;
   CPARAM i_gain;
   CPARAM d_gain;
@@ -171,21 +173,7 @@ typedef struct HA_CFG {
   // Not configurable in setting change mode
   CPARAM temp_setpoint;
   CPARAM fan_only;
-} HA_CFG;
-
-// SOLDERING IRON configuration
-typedef struct SI_CFG {
-  CPARAM p_gain;
-  CPARAM i_gain;
-  CPARAM d_gain;
-  CPARAM i_thresh;
-  CPARAM temp_offset_corr;  
-  CPARAM temp_averages;
-  CPARAM slp_timeout;
-  CPARAM display_adc_raw;
-  // Not configurable in setting change mode
-  CPARAM temp_setpoint;
-} SI_CFG;
+} DEV_CFG;
 
 // State of the device (HA/SI)
 typedef struct CNTRL_STATE {
