@@ -73,6 +73,7 @@ TM1628 tm1628(8, 9, 7);
 
 // HOT AIR configuration
 DEV_CFG ha_cfg = {
+  /* device type */      DEV_HA,
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
@@ -124,6 +125,7 @@ CNTRL_STATE ha_state = {
 
 // SOLDERING IRON configuration
 DEV_CFG si_cfg = {
+  /* device type */      DEV_SI,
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 30, 31, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 32, 33, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 34, 35, "d"},

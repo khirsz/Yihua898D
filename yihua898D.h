@@ -139,6 +139,9 @@
 
 #define CPARAM_NULL { 0, 0, 0, 0, 0xFF, 0xFF, ""}
 
+#define DEV_HA  1
+#define DEV_SI  2
+
 typedef struct CPARAM {
 	int16_t value_min;
 	int16_t value_max;
@@ -151,6 +154,7 @@ typedef struct CPARAM {
 
 // HOT AIR/SOLDERING IRON configuration
 typedef struct DEV_CFG {
+  uint8_t dev_type;
   CPARAM p_gain;
   CPARAM i_gain;
   CPARAM d_gain;
