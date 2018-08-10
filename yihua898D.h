@@ -137,7 +137,7 @@
 
 #define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 
-#define CPARAM_NULL { 0, 0, 0, 0, 0, 0, ""}
+#define CPARAM_NULL { 0, 0, 0, 0, 0xFF, 0xFF, ""}
 
 typedef struct CPARAM {
 	int16_t value_min;
