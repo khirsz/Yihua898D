@@ -98,7 +98,7 @@ DEV_CFG ha_cfg = {
   /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13, "SP"},
   /* fan_only */         { 0, 1, 0, 0, 26, 27, "FnO"},
 };
-char * const CPARAM ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_cfg.i_thresh,
+CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_cfg.i_thresh,
                                       &ha_cfg.temp_offset_corr, &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
 #ifdef CURRENT_SENSE_MOD
                                       &ha_cfg.fan_current_min, &ha_cfg.fan_current_max,
@@ -151,7 +151,7 @@ DEV_CFG si_cfg = {
   /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 46, 47, "SP"},
   /* fan_only */         CPARAM_NULL,
 };
-char * const CPARAM si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
+CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
                                       &si_cfg.temp_offset_corr, &si_cfg.temp_averages, &si_cfg.slp_timeout, &si_cfg.display_adc_raw,};
 
 CNTRL_STATE si_state = {
@@ -506,9 +506,9 @@ void UI_hndl(void)
   } 
   
   //Normal operation display
-  if (sp_mode == DEV_HA && si_state.enabled) {    
+  if (sp_mode == DEV_HA) {    
     temperature_display(&si_cfg, &si_state);
-  } else if (sp_mode == DEV_SI && ha_state.enabled) {    
+  } else if (sp_mode == DEV_SI) {    
     temperature_display(&ha_cfg, &ha_state);
   } else if (!sp_mode) {  
     // Not in sp mode
@@ -524,6 +524,10 @@ void UI_hndl(void)
 
 void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
 {
+  if (!pDev_state->enabled) {
+    return;
+  }
+
   if (pDev_state->temp_average <= SAFE_TO_TOUCH_TEMP) {
     if (pDev_cfg->dev_type == DEV_HA && pDev_cfg->fan_only.value == 1) {
       tm1628.showStr(pDev_cfg->disp_n, "FAn");
@@ -550,14 +554,32 @@ void config_mode(void)
   uint32_t button_scan_time = 0;
   uint8_t blink_state = 0;
   uint8_t param_num = 0;
-  uint8_t edit_mode = 0;
+  uint8_t mode = 0;  
+  uint8_t disp = 0;  
+  uint8_t dev_type = DEV_HA;
+  uint8_t param_max_num = 0;
+  CPARAM * pSet_order = NULL;
   
   HEATERS_OFF;  // security reasons, delay below!
 #ifdef USE_WATCHDOG
   watchdog_off();
 #endif
 
-  tm1628.showStr(DISP_2,ha_set_order[param_num]->szName)
+  // Check if no device select mode
+  if (ha_state.enabled && !si_state.enabled) {
+    dev_type = DEV_HA;
+    mode = 1;
+    disp = ha_cfg.disp_n;
+    param_max_num = NELEMS(ha_set_order);
+    pSet_order = ha_set_order;
+  } else if (!ha_state.enabled && si_state.enabled) {
+    dev_type = DEV_SI;
+    mode = 1;
+    disp = si_cfg.disp_n;
+    param_max_num = NELEMS(si_set_order);
+    pSet_order = si_set_order;
+  } 
+  
   while(1) 
   {
     // Blinking feature
@@ -573,56 +595,109 @@ void config_mode(void)
       key_scan();
       button_scan_time = millis();
     }
-    
-    if (!edit_mode) {
-      // Variable switching mode
+ 
+    if (!mode) {
+      // Device select mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
         break;
       } else if (get_key_event_short(KEY_ENTER)) {
-        edit_mode = 1;
+        mode = 1;
+        if (dev_type == DEV_HA) {
+          disp = ha_cfg.disp_n;
+          param_max_num = NELEMS(ha_set_order);
+          pSet_order = ha_set_order;
+        } else {
+          disp = si_cfg.disp_n;
+          param_max_num = NELEMS(si_set_order);
+          pSet_order = si_set_order;
+        }
       } else if (get_key_event_short(KEY_UP)) {
-        if (param_num+1 < NELEMS(ha_set_order)) {
+        dev_type++;
+        if (dev_type > DEV_SI) {
+          dev_type = DEV_HA;
+        }    
+      } else if (get_key_event_short(KEY_DOWN)) {
+        dev_type--;
+        if (dev_type < DEV_HA) {
+          dev_type = DEV_SI;
+        } 
+      }
+      // Display      
+      if (dev_type == DEV_HA) {
+        tm1628.showStr(si_cfg.disp_n,si_set_order[param_num]->szName);  // show parameter name
+        if (blink_state > 7) {
+          tm1628.clear(ha_cfg.disp_n);
+        } else {         
+          tm1628.showStr(ha_cfg.disp_n,ha_set_order[param_num]->szName);  // show parameter name
+        }   
+      } else {
+        tm1628.showStr(ha_cfg.disp_n,ha_set_order[param_num]->szName);  // show parameter name
+        if (blink_state > 7) {
+          tm1628.clear(si_cfg.disp_n);
+        } else {         
+          tm1628.showStr(si_cfg.disp_n,si_set_order[param_num]->szName);  // show parameter name
+        }  
+      }
+    } else if (mode == 1) {
+      // Variable switching mode
+      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
+        if (ha_state.enabled ^ si_state.enabled) {
+          // Only one device active, exit
+          break;
+        } else {
+          mode = 0;
+        }
+      } else if (get_key_event_short(KEY_ENTER)) {
+        mode = 2;
+      } else if (get_key_event_short(KEY_UP)) {
+        if (param_num+1 < param_max_num) {
           param_num++;
-          tm1628.showStr(DISP_2,ha_set_order[param_num]->szName);
+          tm1628.showStr(disp,pSet_order[param_num]->szName);
         }
       } else if (get_key_event_short(KEY_DOWN)) {
         if (param_num) {
           param_num--;
-          tm1628.showStr(DISP_2,ha_set_order[param_num]->szName)
+          tm1628.showStr(disp,pSet_order[param_num]->szName)
         }
-      }      
+      }   
+      // Display
+      if (blink_state > 7) {
+        tm1628.clear(disp);
+      } else {
+        tm1628.showStr(disp,pSet_order[param_num]->szName);  // show parameter name
+      }       
     } else {
       // Edit value mode     
       if (get_key_event_short(KEY_ENTER)) {
-        eep_save(ha_set_order[param_num]);
-        edit_mode = 0;
-        tm1628.showNum(DISP_2,ha_set_order[param_num]->value);
+        eep_save(pSet_order[param_num]);
+        mode = 1;
+        tm1628.showNum(disp,pSet_order[param_num]->value);
         delay(1000);
         key_event_clear();
       } if (get_key_event_long(KEY_UP)) {
-        if (ha_set_order[param_num]->value < ha_set_order[param_num]->value_max - 10) {
-          ha_set_order[param_num]->value += 10;
+        if (pSet_order[param_num]->value < pSet_order[param_num]->value_max - 10) {
+          pSet_order[param_num]->value += 10;
         }
       } else if (get_key_event_long(KEY_DOWN)) {
-        if (ha_set_order[param_num]->value > ha_set_order[param_num]->value_min + 10) {
-          ha_set_order[param_num]->value -= 10;
+        if (pSet_order[param_num]->value > pSet_order[param_num]->value_min + 10) {
+          pSet_order[param_num]->value -= 10;
         }
       } else if (get_key_event_short(KEY_UP | KEY_DOWN)) {
         loop = 0;
       }else if (get_key_event_short(KEY_UP)) {
-        if (ha_set_order[param_num]->value < ha_set_order[param_num]->value_max) {
-          ha_set_order[param_num]->value++;
+        if (pSet_order[param_num]->value < pSet_order[param_num]->value_max) {
+          pSet_order[param_num]->value++;
         }
       } else if (get_key_event_short(KEY_DOWN)) {
-        if (ha_set_order[param_num]->value > ha_set_order[param_num]->value_min) {
-          ha_set_order[param_num]->value--;
+        if (pSet_order[param_num]->value > pSet_order[param_num]->value_min) {
+          pSet_order[param_num]->value--;
         }
       }
       // Display
       if (blink_state > 7) {
-        tm1628.clear(DISP_2);
+        tm1628.clear(disp);
       } else {
-        tm1628.showNum(DISP_2,ha_set_order[param_num]->value);  // show parameter value
+        tm1628.showNum(disp,pSet_order[param_num]->value);  // show parameter value
       }      
     }    
   }
