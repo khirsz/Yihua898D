@@ -573,6 +573,8 @@ void setup_HW(void)
       
     }
   }
+  
+  key_event_clear();
 }
 
 void load_cfg(void)
@@ -823,10 +825,8 @@ void show_firmware_version(void)
 
 void key_scan(void)
 {  
-  static uint32_t long_press_scan_time = millis();
-  
-  static uint8_t old_key_state = 0;
-  static uint8_t key_state_change = 0;
+  static uint32_t long_press_scan_time = millis();  
+  static uint8_t old_key_state_lscan = 0;
   uint8_t new_key_state;
 
   new_key_state = tm1628.getButtons();
@@ -836,18 +836,17 @@ void key_scan(void)
     Serial.println(new_key_state,HEX);
   }
 #endif
-  //key_state_change |= ~key_state & new_key_state;
-  key_state = new_key_state;
+
+  key_state_s |= (key_state & ~new_key_state) & ~old_key_state_lscan;
+  key_state = new_key_state; 
   
   if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
   {
     long_press_scan_time = millis();
-    key_state_change
-    new_key_state = key_state_l | (old_key_state & key_state); // new key state for long press
-    key_state_s |= (old_key_state & ~key_state);
-    key_state_l = new_key_state;    
-    old_key_state = key_state;
-  } 
+    key_state_l |= (old_key_state_lscan & key_state); // new key state for long press
+    old_key_state_lscan = key_state;
+  }
+  
 #ifdef DEBUG
   Serial.print("KeyS = 0x");
   Serial.println(key_state_s,HEX);
@@ -886,6 +885,14 @@ uint8_t get_key_event_long(uint8_t key_mask)
     return key_mask;
   }
   return 0;
+}
+
+///////////////////////////////////////////////////////////////////
+//
+void key_event_clear(void)
+{
+  key_state_l = 0;
+  key_state_s = 0;
 }
 
 #ifdef USE_WATCHDOG
