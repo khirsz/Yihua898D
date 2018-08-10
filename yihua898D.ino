@@ -103,6 +103,7 @@ char * const CPARAM ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_
 #elif SPEED_SENSE_MOD
                                       &ha_cfg.fan_speed_min, &ha_cfg.fan_speed_max,
 #endif
+                                      };
 
 //TODO clear state after switch off
 CNTRL_STATE ha_state = {
@@ -547,7 +548,8 @@ void config_mode(void)
         eep_save(ha_set_order[param_num]);
         edit_mode = 0;
         tm1628.showNum(DISP_2,ha_set_order[param_num]->value);
-        delay(500);
+        delay(1000);
+        key_event_clear();
       } if (get_key_event_long(KEY_UP)) {
         if (ha_set_order[param_num]->value < ha_set_order[param_num]->value_max - 10) {
           ha_set_order[param_num]->value += 10;
