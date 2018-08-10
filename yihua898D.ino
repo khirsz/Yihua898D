@@ -74,6 +74,7 @@ TM1628 tm1628(8, 9, 7);
 // HOT AIR configuration
 DEV_CFG ha_cfg = {
   /* device type */      DEV_HA,
+  /* display number */   DISP_2,
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
@@ -126,6 +127,7 @@ CNTRL_STATE ha_state = {
 // SOLDERING IRON configuration
 DEV_CFG si_cfg = {
   /* device type */      DEV_SI,
+  /* display number */   DISP_1,
   /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 30, 31, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
   /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 32, 33, "I"},
   /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 34, 35, "d"},
@@ -423,6 +425,7 @@ void UI_hndl(void)
   static uint8_t sp_mode = 0;
   static uint32_t blink_time = millis();
   static uint8_t blink_state = 0;
+  DEV_CFG *pDev_cfg = NULL;
 
   // Blinking feature
   if (millis() - blink_time > BLINK_CYCLE) {
@@ -432,82 +435,114 @@ void UI_hndl(void)
     }
   }
   
+  if (!ha_state.enabled && !si_state.enabled) {
+    // Nothing to do
+    return
+  }
+  
   // menu key handling
   if (get_key_event_short(KEY_ENTER)) {
-    if (!sp_mode) {
-      sp_mode = 1;
-    } else {
+    sp_mode++;
+    if (sp_mode == DEV_HA && !ha_state.enabled) {
+      //HA disabled, skip this state
+      sp_mode++;
+    } else if (sp_mode == DEV_SI && !si_state.enabled) {
+      //SI disabled, skip this state
+      sp_mode++;
+    }    
+    if (sp_mode > DEV_SI) {
       sp_mode = 0;
       eep_save(&ha_cfg.temp_setpoint);
       eep_save(&ha_cfg.fan_only);
+      eep_save(&si_cfg.temp_setpoint);
     }
   }
+  // Select configuration for sp mode
+  if (sp_mode == DEV_HA) {
+    pDev_cfg = &ha_cfg;
+  } else if (sp_mode == DEV_SI) {
+    pDev_cfg = &si_cfg;
+  }  
   
   if (sp_mode) {
     if (get_key_event_short(KEY_UP | KEY_DOWN)) {// Fan only mode
-      ha_cfg.fan_only.value ^= 0x01;
+      if (sp_mode == DEV_HA) {
+        pDev_cfg->fan_only.value ^= 0x01;
+      }
     } else if (get_key_event_short(KEY_UP)) {
-      if (ha_cfg.temp_setpoint.value < ha_cfg.temp_setpoint.value_max) {
-        ha_cfg.temp_setpoint.value++;
+      if (pDev_cfg->temp_setpoint.value < pDev_cfg->temp_setpoint.value_max) {
+        pDev_cfg->temp_setpoint.value++;
       }
     } else if (get_key_event_short(KEY_DOWN)) {
-      if (ha_cfg.temp_setpoint.value > ha_cfg.temp_setpoint.value_min) {
-        ha_cfg.temp_setpoint.value--;
+      if (pDev_cfg->temp_setpoint.value > pDev_cfg->temp_setpoint.value_min) {
+        pDev_cfg->temp_setpoint.value--;
       }
     } else if (get_key_event_long(KEY_UP)) {
-      if (ha_cfg.temp_setpoint.value < (ha_cfg.temp_setpoint.value_max - 10)) {
-        ha_cfg.temp_setpoint.value += 10;
+      if (pDev_cfg->temp_setpoint.value < (pDev_cfg->temp_setpoint.value_max - 10)) {
+        pDev_cfg->temp_setpoint.value += 10;
       } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_max;
+        pDev_cfg->temp_setpoint.value = pDev_cfg->temp_setpoint.value_max;
       }
   
     } else if (get_key_event_long(KEY_DOWN)) {
   
-      if (ha_cfg.temp_setpoint.value > (ha_cfg.temp_setpoint.value_min + 10)) {
-        ha_cfg.temp_setpoint.value -= 10;
+      if (pDev_cfg->temp_setpoint.value > (pDev_cfg->temp_setpoint.value_min + 10)) {
+        pDev_cfg->temp_setpoint.value -= 10;
       } else {
-        ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_min;
+        pDev_cfg->temp_setpoint.value = pDev_cfg->temp_setpoint.value_min;
       }
     } 
     
     // Display
     if (blink_state > 7) {
-      if (ha_cfg.fan_only.value == 1) {
-        tm1628.showStr(DISP_2,"FAn");
+      if (sp_mode == DEV_HA && pDev_cfg->fan_only.value == 1) {
+        tm1628.showStr(pDev_cfg->disp_n,"FAn");
       } else {
-        tm1628.clear(DISP_2);
+        tm1628.clear(pDev_cfg->disp_n);
       }
     } else {
-      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // show temperature setpoint
+      tm1628.showNum(pDev_cfg->disp_n, pDev_cfg->temp_setpoint.value);  // show temperature setpoint
     }
-  } else {
-    //Normal operation display
-    if (ha_state.temp_average <= SAFE_TO_TOUCH_TEMP) {
-      if (ha_cfg.fan_only.value == 1) {
-        tm1628.showStr(DISP_2,"FAn");
-      } else {
-        tm1628.showStr(DISP_2,"---");
-      }
-    } else if (ha_cfg.fan_only.value == 1) {
-      if (blink_state < 5) {
-        tm1628.showStr(DISP_2,"FAn");
-      } else {
-        tm1628.showNum(DISP_2,ha_state.temp_average);
-      }
-    } else if (ha_cfg.display_adc_raw.value == 1) {
-      tm1628.showNum(DISP_2,ha_state.adc_raw);
-    } else if (abs((int16_t) (ha_state.temp_average) - (int16_t) (ha_cfg.temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
-      tm1628.showNum(DISP_2,ha_cfg.temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
-    } else {
-      tm1628.showNum(DISP_2,ha_state.temp_average);
-    }
+  } 
+  
+  //Normal operation display
+  if (sp_mode == DEV_HA && si_state.enabled) {    
+    temperature_display(&si_cfg, &si_state);
+  } else if (sp_mode == DEV_SI && ha_state.enabled) {    
+    temperature_display(&ha_cfg, &ha_state);
+  } else if (!sp_mode) {  
+    // Not in sp mode
+    temperature_display(&ha_cfg, &ha_state);
+    temperature_display(&si_cfg, &si_state);
     
     // Configuration mode
     if (get_key_event_long(KEY_UP | KEY_DOWN)) {
       config_mode();
     }
+  }  
+}
+
+void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
+{
+  if (pDev_state->temp_average <= SAFE_TO_TOUCH_TEMP) {
+    if (pDev_cfg->dev_type == DEV_HA && pDev_cfg->fan_only.value == 1) {
+      tm1628.showStr(pDev_cfg->disp_n, "FAn");
+    } else {
+      tm1628.showStr(pDev_cfg->disp_n, "---");
+    }
+  } else if (pDev_cfg->dev_type == DEV_HA && pDev_cfg->fan_only.value == 1) {
+    if (blink_state < 5) {
+      tm1628.showStr(pDev_cfg->disp_n, "FAn");
+    } else {
+      tm1628.showNum(pDev_cfg->disp_n, pDev_state->temp_average);
+    }
+  } else if (pDev_cfg->display_adc_raw.value == 1) {
+    tm1628.showNum(pDev_cfg->disp_n, pDev_state->adc_raw);
+  } else if (abs((int16_t) (pDev_state->temp_average) - (int16_t) (pDev_cfg->temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
+    tm1628.showNum(pDev_cfg->disp_n, pDev_cfg->temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
+  } else {
+    tm1628.showNum(pDev_cfg->disp_n, pDev_state->temp_average);
   }
-  
 }
 
 void config_mode(void)

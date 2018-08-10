@@ -155,6 +155,7 @@ typedef struct CPARAM {
 // HOT AIR/SOLDERING IRON configuration
 typedef struct DEV_CFG {
   uint8_t dev_type;
+  uint8_t disp_n;
   CPARAM p_gain;
   CPARAM i_gain;
   CPARAM d_gain;
@@ -203,6 +204,7 @@ typedef struct CNTRL_STATE {
 void HA_cntrl(void);
 void UI_hndl(void);
 void config_mode(void);
+void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
 void fan_test(void);
