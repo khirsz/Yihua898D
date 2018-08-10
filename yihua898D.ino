@@ -50,7 +50,7 @@
 #define FW_MINOR_V_A 4
 #define FW_MINOR_V_B 6
 /*
- * #21: AREF <--- about 2.5V as analog reference for ADC
+ * #21: AREF <--- about 3.3V as analogue reference for ADC, i.e. from Arduino 3.3V pin.
  */
 
 #include <avr/io.h>
@@ -73,28 +73,36 @@ TM1628 tm1628(8, 9, 7);
 
 // HOT AIR configuration
 HA_CFG ha_cfg = {
-  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3 },  // min, max, default, value, eep_addr_high, eep_addr_low
-  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5 },
-  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7 },
-  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9 },
-  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 10, 11 },
-  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13 },
-  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 14, 15 },
-  /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 16, 17 },
-  /* fan_only */         { 0, 1, 0, 0, 26, 27 },
-  /* display_adc_raw */  { 0, 1, 0, 0, 28, 29 },
+  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
+  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
+  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9, "ItH"},
+  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 10, 11, "toF"},
+  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 14, 15, "Avg"},
+  /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 16, 17, "SLP"},
+  /* display_adc_raw */  { 0, 1, 0, 0, 28, 29, "Adc"},
 #ifdef CURRENT_SENSE_MOD
-  /* fan_current_min */  { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 22, 23 },
-  /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25 },
+  /* fan_current_min */  { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 22, 23, "FcL"},
+  /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25, "FcH"},
 #elif SPEED_SENSE_MOD
   //
   // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
   //
-  /* fan_speed_min */    { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 18, 19 },
-  /* fan_speed_max */    { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 20, 21 },
+  /* fan_speed_min */    { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 18, 19, "FSL"},
+  /* fan_speed_max */    { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 20, 21, "FSH"},
 #endif
+  // Not configurable in setting change mode
+  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13, "SP"},
+  /* fan_only */         { 0, 1, 0, 0, 26, 27, "FnO"},
 };
+char * const CPARAM ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_cfg.i_thresh,
+                                      &ha_cfg.temp_offset_corr, &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
+#ifdef CURRENT_SENSE_MOD
+                                      &ha_cfg.fan_current_min, &ha_cfg.fan_current_max,
+#elif SPEED_SENSE_MOD
+                                      &ha_cfg.fan_speed_min, &ha_cfg.fan_speed_max,
+#endif
 
 //TODO clear state after switch off
 CNTRL_STATE ha_state = {
@@ -115,16 +123,19 @@ CNTRL_STATE ha_state = {
 
 // SOLDERING IRON configuration
 SI_CFG si_cfg = {
-  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 30, 31 },  // min, max, default, value, eep_addr_high, eep_addr_low
-  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 32, 33 },
-  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 34, 35 },
-  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 36, 37 },
-  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 38, 39 },
-  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 40, 41 },
-  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 42, 43 },
-  /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 44, 45 },
-  /* display_adc_raw */  { 0, 1, 0, 0, 46, 47 },
+  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
+  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
+  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9, "ItH"},
+  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 10, 11, "toF"},
+  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 14, 15, "Avg"},
+  /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 16, 17, "SLP"},
+  /* display_adc_raw */  { 0, 1, 0, 0, 28, 29, "Adc"},
+  // Not configurable in setting change mode
+  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13, "SP"},
 };
+char * const CPARAM si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
+                                      &si_cfg.temp_offset_corr, &si_cfg.temp_averages, &si_cfg.slp_timeout, &si_cfg.display_adc_raw,};
 
 CNTRL_STATE si_state = {
   /* temp_inst                 */   0,
@@ -157,11 +168,11 @@ void setup()
   Serial.println("\nRESET");
 #endif
   
+  tm1628.begin(ON, LED_POW); 
+    
   setup_HW();
   
   load_cfg();
- 
-  tm1628.begin(ON, LED_POW); 
 
 #ifdef USE_WATCHDOG
   if (watchdog_check()) 
@@ -190,10 +201,12 @@ void setup()
   test_F_CPU_with_watchdog();
   watchdog_on();
 #endif
+
+  key_event_clear();
 }
 
 void loop() {
-    static int32_t button_scan_time = 0;
+    static uint32_t button_scan_time = 0;
 
 #ifdef USE_WATCHDOG
     wdt_reset();
@@ -351,7 +364,7 @@ void HA_cntrl(void)
     // security first!
     if (ha_state.temp_average >= MAX_TEMP_ERR) {
       // something might have gone terribly wrong
-      HA_HEATER_OFF;
+      HEATERS_OFF;
       FAN_ON;
 #ifdef USE_WATCHDOG
       watchdog_off();
@@ -473,44 +486,99 @@ void UI_hndl(void)
     } else {
       tm1628.showNum(DISP_2,ha_state.temp_average);
     }
+    
+    // Configuration mode
+    if (get_key_event_long(KEY_UP | KEY_DOWN)) {
+      config_mode();
+    }
   }
   
-  // Configuration mode
-  /*if (get_key_event_long(KEY_UP | KEY_DOWN)) {
-    HEATERS_OFF;  // security reasons, delay below!
+}
+
+void config_mode(void)
+{
+  uint32_t button_scan_time = 0;
+  uint8_t blink_state = 0;
+  uint8_t param_num = 0;
+  uint8_t edit_mode = 0;
+  
+  HEATERS_OFF;  // security reasons, delay below!
 #ifdef USE_WATCHDOG
-    watchdog_off();
+  watchdog_off();
 #endif
-    delay(uint16_t(20.48 * (REPEAT_START - 3) + 1));
-    if (get_key_event_long_r(KEY_UP | KEY_DOWN)) {
-      change_config_parameter(&ha_cfg.p_gain, "P", DISP_2);
-      change_config_parameter(&ha_cfg.i_gain, "I", DISP_2);
-      change_config_parameter(&ha_cfg.d_gain, "d", DISP_2);
-      change_config_parameter(&ha_cfg.i_thresh, "ItH", DISP_2);
-      change_config_parameter(&ha_cfg.temp_offset_corr, "toF", DISP_2);
-      change_config_parameter(&ha_cfg.temp_averages, "Avg", DISP_2);
-      change_config_parameter(&ha_cfg.slp_timeout, "SLP", DISP_2);
-      change_config_parameter(&ha_cfg.display_adc_raw, "Adc", DISP_2);
-#ifdef CURRENT_SENSE_MOD
-      change_config_parameter(&ha_cfg.fan_current_min, "FcL", DISP_2);
-      change_config_parameter(&ha_cfg.fan_current_max, "FcH", DISP_2);
-#elif SPEED_SENSE_MOD
-      change_config_parameter(&ha_cfg.fan_speed_min, "FSL", DISP_2);
-      change_config_parameter(&ha_cfg.fan_speed_max, "FSH", DISP_2);
-#endif
-    } else {
-      get_key_event_press(KEY_UP | KEY_DOWN); // clear inp state
-      ha_cfg.fan_only.value ^= 0x01;
-      ha_state.temp_setpoint_saved = 0;
-      if (ha_cfg.fan_only.value == 0) {
-        button_input_time = millis(); // show set temp after disabling fan only mode
+
+  tm1628.showStr(DISP_2,ha_set_order[param_num]->szName)
+  while(1) 
+  {
+    // Blinking feature
+    if (millis() - blink_time > BLINK_CYCLE) {
+      blink_time = millis();
+      if (++blink_state > BLINK_STATE_MAX) {
+        blink_state = 0;
       }
-      display_blink = 0;  // make sure we start displaying "FAn" or set temp
+    }  
+    // Key scanning
+    if (millis() - button_scan_time > BUTTON_SCANN_CYCLE)
+    {
+      key_scan();
+      button_scan_time = millis();
     }
+    
+    if (!edit_mode) {
+      // Variable switching mode
+      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
+        break;
+      } else if (get_key_event_short(KEY_ENTER)) {
+        edit_mode = 1;
+      } else if (get_key_event_short(KEY_UP)) {
+        if (param_num+1 < NELEMS(ha_set_order)) {
+          param_num++;
+          tm1628.showStr(DISP_2,ha_set_order[param_num]->szName);
+        }
+      } else if (get_key_event_short(KEY_DOWN)) {
+        if (param_num) {
+          param_num--;
+          tm1628.showStr(DISP_2,ha_set_order[param_num]->szName)
+        }
+      }      
+    } else {
+      // Edit value mode     
+      if (get_key_event_short(KEY_ENTER)) {
+        eep_save(ha_set_order[param_num]);
+        edit_mode = 0;
+        tm1628.showNum(DISP_2,ha_set_order[param_num]->value);
+        delay(500);
+      } if (get_key_event_long(KEY_UP)) {
+        if (ha_set_order[param_num]->value < ha_set_order[param_num]->value_max - 10) {
+          ha_set_order[param_num]->value += 10;
+        }
+      } else if (get_key_event_long(KEY_DOWN)) {
+        if (ha_set_order[param_num]->value > ha_set_order[param_num]->value_min + 10) {
+          ha_set_order[param_num]->value -= 10;
+        }
+      } else if (get_key_event_short(KEY_UP | KEY_DOWN)) {
+        loop = 0;
+      }else if (get_key_event_short(KEY_UP)) {
+        if (ha_set_order[param_num]->value < ha_set_order[param_num]->value_max) {
+          ha_set_order[param_num]->value++;
+        }
+      } else if (get_key_event_short(KEY_DOWN)) {
+        if (ha_set_order[param_num]->value > ha_set_order[param_num]->value_min) {
+          ha_set_order[param_num]->value--;
+        }
+      }
+      // Display
+      if (blink_state > 7) {
+        tm1628.clear(DISP_2);
+      } else {
+        tm1628.showNum(DISP_2,ha_set_order[param_num]->value);  // show parameter value
+      }      
+    }    
+  }
+
 #ifdef USE_WATCHDOG
-    watchdog_on();
+  watchdog_on();
 #endif
-  }*/
 }
 
 void setup_HW(void)
@@ -537,7 +605,7 @@ void setup_HW(void)
   pinMode(FAN_SPEED_PIN, INPUT);  // set as input
 #endif
 
-  analogReference(EXTERNAL);  // use external 2.5V as ADC reference voltage (VCC / 2)
+  analogReference(EXTERNAL);  // use external 3.3V (i.e. from Arduino pin) as ADC reference voltage
 
   if (EEPROM.read(0) != 0x22) {
     // check if the firmware was just flashed and the EEPROM is therefore empty
@@ -574,7 +642,6 @@ void setup_HW(void)
     }
   }
   
-  key_event_clear();
 }
 
 void load_cfg(void)
@@ -606,39 +673,6 @@ void load_cfg(void)
   eep_load(&si_cfg.temp_averages);
   eep_load(&si_cfg.slp_timeout);
   eep_load(&si_cfg.display_adc_raw);
-}
-
-void change_config_parameter(CPARAM * param, const char *string, uint8_t disp)
-{
-  tm1628.showStr(disp,string);
-  delay(750);   // let the user read what is shown
-
-  uint8_t loop = 1;
-
-  while (loop == 1) {
-    if (get_key_event_short(KEY_UP | KEY_DOWN)) {
-      loop = 0;
-    }else if (get_key_event_short(KEY_UP)) {
-      if (param->value < param->value_max) {
-        param->value++;
-      }
-    } else if (get_key_event_short(KEY_DOWN)) {
-      if (param->value > param->value_min) {
-        param->value--;
-      }
-    } else if (get_key_event_long(KEY_UP)) {
-      if (param->value < param->value_max - 10) {
-        param->value += 10;
-      }
-    } else if (get_key_event_long(KEY_DOWN)) {
-      if (param->value > param->value_min + 10) {
-        param->value -= 10;
-      }
-    } 
-
-    tm1628.showNum(disp,param->value);
-  }
-  eep_save(param);
 }
 
 void eep_save(CPARAM * param)

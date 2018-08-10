@@ -135,6 +135,8 @@
 #define KEY_DOWN        BT_DW
 #define KEY_ENTER       BT_EN
 
+#define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
+
 typedef struct CPARAM {
 	int16_t value_min;
 	int16_t value_max;
@@ -142,6 +144,7 @@ typedef struct CPARAM {
 	int16_t value;
 	uint8_t eep_addr_high;
 	uint8_t eep_addr_low;
+  char[4] szName;
 } CPARAM;
 
 // HOT AIR configuration
@@ -151,10 +154,8 @@ typedef struct HA_CFG {
   CPARAM d_gain;
   CPARAM i_thresh;
   CPARAM temp_offset_corr;
-  CPARAM temp_setpoint;
   CPARAM temp_averages;
   CPARAM slp_timeout;
-  CPARAM fan_only;
   CPARAM display_adc_raw;
 #ifdef CURRENT_SENSE_MOD
   CPARAM fan_current_min;
@@ -167,6 +168,9 @@ typedef struct HA_CFG {
   CPARAM fan_speed_min;
   CPARAM fan_speed_max;
 #endif
+  // Not configurable in setting change mode
+  CPARAM temp_setpoint;
+  CPARAM fan_only;
 } HA_CFG;
 
 // SOLDERING IRON configuration
@@ -175,11 +179,12 @@ typedef struct SI_CFG {
   CPARAM i_gain;
   CPARAM d_gain;
   CPARAM i_thresh;
-  CPARAM temp_offset_corr;
-  CPARAM temp_setpoint;
+  CPARAM temp_offset_corr;  
   CPARAM temp_averages;
   CPARAM slp_timeout;
   CPARAM display_adc_raw;
+  // Not configurable in setting change mode
+  CPARAM temp_setpoint;
 } SI_CFG;
 
 // State of the device (HA/SI)
@@ -205,7 +210,7 @@ typedef struct CNTRL_STATE {
 
 void HA_cntrl(void);
 void UI_hndl(void);
-void change_config_parameter(CPARAM * param, const char *string, uint8_t disp);
+void config_mode(void);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
 void fan_test(void);
