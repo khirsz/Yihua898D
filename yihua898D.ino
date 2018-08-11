@@ -320,16 +320,14 @@ void HA_cntrl(void)
       tm1628.clearDot(DISP_2,0);
     }
 
-    static uint16_t temp_avg_ctr = 0;
-
     ha_state.temp_accu += ha_state.temp_inst;
-    temp_avg_ctr++;
+    ha_state.temp_avg_ctr++;
 
-    if (temp_avg_ctr == (uint16_t) (ha_cfg.temp_averages.value)) {
+    if (ha_state.temp_avg_ctr == (uint16_t) (ha_cfg.temp_averages.value)) {
       ha_state.temp_average_previous = ha_state.temp_average;
       ha_state.temp_average = ha_state.temp_accu / ha_cfg.temp_averages.value;
       ha_state.temp_accu = 0;
-      temp_avg_ctr = 0;
+      ha_state.temp_avg_ctr = 0;
     }
     // fan/cradle handling
     if (REEDSW_OPEN) {

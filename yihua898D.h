@@ -190,6 +190,7 @@ typedef struct CNTRL_STATE {
   int32_t temp_accu;
   int16_t temp_average;
   int16_t temp_average_previous;
+  uint16_t temp_avg_ctr;
   
   int16_t heater_ctr;
   int16_t heater_duty_cycle;
