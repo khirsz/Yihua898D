@@ -565,7 +565,7 @@ void config_mode(void)
     }
     
     // Check SW state
-    if (!get_sw_state(HA_SW) && !get_sw_state(SI_SW) {
+    if (!get_sw_state(HA_SW) && !get_sw_state(SI_SW)) {
       //Nothing to do, exit
       break;
     } else if ((ha_state.enabled == 1) != (get_sw_state(HA_SW) == HA_SW)) {
