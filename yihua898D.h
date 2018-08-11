@@ -67,11 +67,15 @@
 #define HA_SW_INIT       pinMode(HA_SW_PIN, INPUT_PULLUP)
 #define HA_SW_ON         (!digitalRead(HA_SW_PIN))
 #define HA_SW_OFF        digitalRead(HA_SW_PIN)
+// Switch mask in sw state
+#define HA_SW            0x01
 
 #define SI_SW_PIN        6
 #define SI_SW_INIT       pinMode(SI_SW_PIN, INPUT_PULLUP)
 #define SI_SW_ON         (!digitalRead(SI_SW_PIN))
 #define SI_SW_OFF        digitalRead(SI_SW_PIN)
+// Switch mask in sw state
+#define SI_SW            0x02
 
 #define LED_POW   2
 #define BLINK_CYCLE       75
@@ -210,6 +214,7 @@ void eep_save(CPARAM * param);
 void fan_test(void);
 void restore_default_conf(void);
 void setup_HW(void);
+void init_state(CNTRL_STATE *pDev_state);
 void load_cfg(void);
 void show_firmware_version(void);
 #ifdef USE_WATCHDOG
@@ -219,6 +224,7 @@ uint8_t watchdog_check(void);
 void test_F_CPU_with_watchdog(void);
 #endif
 void key_scan(void);
+uint8_t get_sw_state(uint8_t sw_mask);
 uint8_t get_key_state(uint8_t key_mask);
 uint8_t get_key_event_short(uint8_t key_mask);
 uint8_t get_key_event_long(uint8_t key_mask);

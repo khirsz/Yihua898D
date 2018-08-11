@@ -106,23 +106,7 @@ CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_c
                                       &ha_cfg.fan_speed_min, &ha_cfg.fan_speed_max,
 #endif
                                       };
-
-//TODO clear state after switch off
-CNTRL_STATE ha_state = {
-  /* temp_inst                 */   0,
-  /* temp_accu                 */   0,
-  /* temp_average              */   0,
-  /* temp_average_previous     */   0,
-  /* heater_ctr                */   0,
-  /* heater_duty_cycle         */   0,
-  /* error                     */   0,
-  /* error_accu                */   0,
-  /* velocity                  */   0,
-  /* PID_drive                 */   0,
-  /* heater_start_time         */   0,
-  /* adc_raw                   */   0,
-  /* enabled                   */   0,
-};
+CNTRL_STATE ha_state;
 
 // SOLDERING IRON configuration
 DEV_CFG si_cfg = {
@@ -153,26 +137,12 @@ DEV_CFG si_cfg = {
 };
 CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
                                       &si_cfg.temp_offset_corr, &si_cfg.temp_averages, &si_cfg.slp_timeout, &si_cfg.display_adc_raw,};
-
-CNTRL_STATE si_state = {
-  /* temp_inst                 */   0,
-  /* temp_accu                 */   0,
-  /* temp_average              */   0,
-  /* temp_average_previous     */   0,
-  /* heater_ctr                */   0,
-  /* heater_duty_cycle         */   0,
-  /* error                     */   0,
-  /* error_accu                */   0,
-  /* velocity                  */   0,
-  /* PID_drive                 */   0,
-  /* heater_start_time         */   0,
-  /* adc_raw                   */   0,
-  /* enabled                   */   0,
-};
+CNTRL_STATE si_state;
 
 volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: key pressed
 volatile uint8_t key_state_l = 0; // key long press
 volatile uint8_t key_state_s = 0; // key short press
+volatile uint8_t sw_state = 0; // debounced switch state: bit = 1: sw on
 
 void setup()
 {
@@ -188,6 +158,9 @@ void setup()
   tm1628.begin(ON, LED_POW); 
     
   setup_HW();
+
+  init_state(&ha_state);
+  init_state(&si_state);
   
   load_cfg();
 
@@ -254,36 +227,27 @@ void HA_cntrl(void)
   int32_t start_time = micros();
 #endif
       
-  if (!ha_state.enabled && HA_SW_ON)
+  if (!ha_state.enabled && get_sw_state(HA_SW))
   {
     // Enable HA
-    // Debounce
-    delay(40);
-    wdt_reset();
-    if (HA_SW_ON)
-    {
-      ha_state.enabled = 1;
+    ha_state.enabled = 1;
 #ifdef DEBUG
-      Serial.println("HA on!");
+    Serial.println("HA on!");
 #endif
-      fan_test();
-    }      
-  } else if (ha_state.enabled && HA_SW_OFF) 
+    fan_test();
+       
+  } else if (ha_state.enabled && !get_sw_state(HA_SW)) 
   {
     // Disable HA
-    // Debounce
-    delay(40);
-    wdt_reset();
-    if (HA_SW_OFF)
-    {
-      ha_state.enabled = 0;
-      HA_HEATER_OFF;
-      FAN_OFF;
+    ha_state.enabled = 0;
+    HA_HEATER_OFF;
+    FAN_OFF;
 #ifdef DEBUG
-      Serial.println("HA off!");
+    Serial.println("HA off!");
 #endif
-      tm1628.clear(DISP_2);
-    } 
+    tm1628.clear(DISP_2);
+    // Clear state
+    init_state(&ha_state);
   }
 
   if (ha_state.enabled)
@@ -683,7 +647,8 @@ void config_mode(void)
         if (pSet_order[param_num]->value > pSet_order[param_num]->value_min + 10) {
           pSet_order[param_num]->value -= 10;
         }
-      } else if (get_key_event_short(KEY_UP | KEY_DOWN)) {
+      } else if (get_key_event_short(KEY_UP | KEY_DOWN)) { //Exit without saving
+        eep_load(pSet_order[param_num]);
         mode = 1;
       }else if (get_key_event_short(KEY_UP)) {
         if (pSet_order[param_num]->value < pSet_order[param_num]->value_max) {
@@ -769,6 +734,13 @@ void setup_HW(void)
     }
   }
   
+}
+
+void init_state(CNTRL_STATE *pDev_state) {
+  if (pDev_state == NULL) {
+    return;
+  }
+  memset(pDev_state, 0, sizeof(CNTRL_STATE));
 }
 
 void load_cfg(void)
@@ -989,18 +961,52 @@ void key_scan(void)
   static uint32_t long_press_scan_time = millis();  
   static uint8_t old_key_state_lscan = 0;
   static uint8_t key_state_ldetected = 0;
-  uint8_t new_key_state;
+  uint8_t tmp_state = 0;
+  // For debouncing on/off SW
+  static uint8_t sw_state_bounce = 0;
 
-  new_key_state = tm1628.getButtons();
+  //SW handling
+  if (HA_SW_ON) {
+    if (sw_state_bounce & HA_SW) { // State on
+      tmp_state |= HA_SW;
+    }
+    sw_state_bounce |= HA_SW;
+  } else {
+    if (!(sw_state_bounce & HA_SW)) { // State off
+      tmp_state &= ~HA_SW;
+    }
+    sw_state_bounce &= ~HA_SW;
+  }
+  if (SI_SW_ON) {
+    if (sw_state_bounce & SI_SW) { // State on
+      tmp_state |= SI_SW;
+    }
+    sw_state_bounce |= SI_SW;
+  } else {
+    if (!(sw_state_bounce & SI_SW)) { // State off
+      tmp_state &= ~SI_SW;
+    }
+    sw_state_bounce &= ~SI_SW;
+  }    
 #ifdef DEBUG
-  if (key_state ^ new_key_state) {
+  if (sw_state ^ tmp_state) {
+    Serial.print("SW = 0x");
+    Serial.println(tmp_state,HEX);
+  }
+#endif
+  sw_state = tmp_state;
+
+  tmp_state = tm1628.getButtons();
+#ifdef DEBUG
+  if (key_state ^ tmp_state) {
     Serial.print("BT = 0x");
-    Serial.println(new_key_state,HEX);
+    Serial.println(tmp_state,HEX);
   }
 #endif
 
-  key_state_s |= (key_state & ~new_key_state) & ~old_key_state_lscan;
-  key_state = new_key_state; 
+  // Key handling
+  key_state_s |= (key_state & ~tmp_state) & ~old_key_state_lscan;
+  key_state = tmp_state; 
   
   if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
   {
@@ -1011,6 +1017,14 @@ void key_scan(void)
     key_state_ldetected |= (old_key_state_lscan & key_state); // save this long press
     old_key_state_lscan = key_state;
   }
+}
+
+///////////////////////////////////////////////////////////////////
+//
+uint8_t get_sw_state(uint8_t sw_mask)
+{
+  sw_mask &= sw_state;
+  return sw_mask;
 }
 
 ///////////////////////////////////////////////////////////////////
