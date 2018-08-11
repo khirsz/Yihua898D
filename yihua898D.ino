@@ -286,9 +286,9 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     if (start_time % 1000 == 0)
     {
       if (pDev_cfg->dev_type == DEV_HA) {
-        Serial.println("HA adc=");
+        Serial.print("HA adc=");
       } else {
-        Serial.println("SI adc=");
+        Serial.print("SI adc=");
       }
       Serial.print(pDev_state->adc_raw);
       Serial.println();
@@ -670,23 +670,24 @@ void config_mode(void)
       }
       // Display      
       if (dev_type == DEV_HA) {
-        tm1628.showStr(si_cfg.disp_n,"SI");  // show device name
+        tm1628.showStr(si_cfg.disp_n,"Sol");  // show device name
         if (blink_state > 7) {
           tm1628.clear(ha_cfg.disp_n);
         } else {         
-          tm1628.showStr(ha_cfg.disp_n,"HA");  // show device name
+          tm1628.showStr(ha_cfg.disp_n,"Hot");  // show device name
         }   
       } else {
-        tm1628.showStr(ha_cfg.disp_n,"HA");  // show parameter name
+        tm1628.showStr(ha_cfg.disp_n,"Hot");  // show parameter name
         if (blink_state > 7) {
           tm1628.clear(si_cfg.disp_n);
         } else {         
-          tm1628.showStr(si_cfg.disp_n,"SI");  // show parameter name
+          tm1628.showStr(si_cfg.disp_n,"Sol");  // show parameter name
         }  
       }
     } else if (mode == MODE_VAR_SW) {
       // Variable switching mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
+        param_num = 0;
         if (ha_state.enabled ^ si_state.enabled) {
           // Only one device active, exit
           break;
@@ -748,6 +749,7 @@ void config_mode(void)
       }      
     }    
   }
+  key_event_clear();
 
 #ifdef USE_WATCHDOG
   watchdog_on();
