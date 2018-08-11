@@ -549,21 +549,34 @@ void config_mode(void)
   } 
   
   while(1) 
-  {
+  {   
     // Blinking feature
     if (millis() - blink_time > BLINK_CYCLE) {
       blink_time = millis();
       if (++blink_state > BLINK_STATE_MAX) {
         blink_state = 0;
       }
-    }  
+    }      
     // Key scanning
     if (millis() - button_scan_time > BUTTON_SCANN_CYCLE)
     {
       key_scan();
       button_scan_time = millis();
     }
+    
+    // Check SW state
+    if (!get_sw_state(HA_SW) && !get_sw_state(SI_SW) {
+      //Nothing to do, exit
+      break;
+    } else if ((ha_state.enabled == 1) != (get_sw_state(HA_SW) == HA_SW)) {
+      // HA state change, exit config mode
+      break;
+    } else if ((si_state.enabled == 1) != (get_sw_state(SI_SW) == SI_SW)) {
+      // SI state change, exit config mode
+      break;
+    } 
  
+    //Configure device
     if (!mode) {
       // Device select mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
