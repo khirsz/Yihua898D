@@ -670,18 +670,18 @@ void config_mode(void)
       }
       // Display      
       if (dev_type == DEV_HA) {
-        tm1628.showStr(si_cfg.disp_n,si_set_order[param_num]->szName);  // show parameter name
+        tm1628.showStr(si_cfg.disp_n,"SI");  // show device name
         if (blink_state > 7) {
           tm1628.clear(ha_cfg.disp_n);
         } else {         
-          tm1628.showStr(ha_cfg.disp_n,ha_set_order[param_num]->szName);  // show parameter name
+          tm1628.showStr(ha_cfg.disp_n,"HA");  // show device name
         }   
       } else {
-        tm1628.showStr(ha_cfg.disp_n,ha_set_order[param_num]->szName);  // show parameter name
+        tm1628.showStr(ha_cfg.disp_n,"HA");  // show parameter name
         if (blink_state > 7) {
           tm1628.clear(si_cfg.disp_n);
         } else {         
-          tm1628.showStr(si_cfg.disp_n,si_set_order[param_num]->szName);  // show parameter name
+          tm1628.showStr(si_cfg.disp_n,"SI");  // show parameter name
         }  
       }
     } else if (mode == MODE_VAR_SW) {
