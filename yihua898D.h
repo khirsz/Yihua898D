@@ -210,7 +210,7 @@ typedef struct CNTRL_STATE {
   uint8_t enabled;
 } CNTRL_STATE;
 
-void HA_cntrl(void);
+void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state);
 void UI_hndl(void);
 void config_mode(void);
 void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t blink_state);
