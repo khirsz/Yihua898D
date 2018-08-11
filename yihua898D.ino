@@ -522,7 +522,7 @@ void config_mode(void)
   uint32_t blink_time = millis();
   uint8_t blink_state = 0;
   uint8_t param_num = 0;
-  uint8_t mode = 0;  
+  uint8_t mode = MODE_DEV_SEL;  
   uint8_t disp = 0;  
   uint8_t dev_type = DEV_HA;
   uint8_t param_max_num = 0;
@@ -536,13 +536,13 @@ void config_mode(void)
   // Check if no device select mode
   if (ha_state.enabled && !si_state.enabled) {
     dev_type = DEV_HA;
-    mode = 1;
+    mode = MODE_VAR_SW;
     disp = ha_cfg.disp_n;
     param_max_num = NELEMS(ha_set_order);
     pSet_order = (CPARAM **)&ha_set_order;
   } else if (!ha_state.enabled && si_state.enabled) {
     dev_type = DEV_SI;
-    mode = 1;
+    mode = MODE_VAR_SW;
     disp = si_cfg.disp_n;
     param_max_num = NELEMS(si_set_order);
     pSet_order = (CPARAM **)&si_set_order;
@@ -577,12 +577,12 @@ void config_mode(void)
     } 
  
     //Configure device
-    if (!mode) {
+    if (mode == MODE_DEV_SEL) {
       // Device select mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
         break;
       } else if (get_key_event_short(KEY_ENTER)) {
-        mode = 1;
+        mode = MODE_VAR_SW;
         if (dev_type == DEV_HA) {
           disp = ha_cfg.disp_n;
           param_max_num = NELEMS(ha_set_order);
@@ -619,17 +619,17 @@ void config_mode(void)
           tm1628.showStr(si_cfg.disp_n,si_set_order[param_num]->szName);  // show parameter name
         }  
       }
-    } else if (mode == 1) {
+    } else if (mode == MODE_VAR_SW) {
       // Variable switching mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
         if (ha_state.enabled ^ si_state.enabled) {
           // Only one device active, exit
           break;
         } else {
-          mode = 0;
+          mode = MODE_DEV_SEL;
         }
       } else if (get_key_event_short(KEY_ENTER)) {
-        mode = 2;
+        mode = MODE_VAL_SET;
       } else if (get_key_event_short(KEY_DOWN)) {
         if (param_num+1 < param_max_num) {
           param_num++;
@@ -651,7 +651,7 @@ void config_mode(void)
       // Edit value mode     
       if (get_key_event_short(KEY_ENTER)) {
         eep_save(pSet_order[param_num]);
-        mode = 1;
+        mode = MODE_VAR_SW;
         tm1628.showNum(disp,pSet_order[param_num]->value);
         delay(1000);
         key_event_clear();
@@ -665,7 +665,7 @@ void config_mode(void)
         }
       } else if (get_key_event_short(KEY_UP | KEY_DOWN)) { //Exit without saving
         eep_load(pSet_order[param_num]);
-        mode = 1;
+        mode = MODE_VAR_SW;
       }else if (get_key_event_short(KEY_UP)) {
         if (pSet_order[param_num]->value < pSet_order[param_num]->value_max) {
           pSet_order[param_num]->value++;

@@ -139,6 +139,10 @@
 #define KEY_DOWN        BT_DW
 #define KEY_ENTER       BT_EN
 
+#define MODE_DEV_SEL    0
+#define MODE_VAR_SW     1
+#define MODE_VAL_SET    2
+
 #define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 
 #define CPARAM_NULL { 0, 0, 0, 0, 0xFF, 0xFF, ""}
