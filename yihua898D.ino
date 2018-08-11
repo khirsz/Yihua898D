@@ -650,12 +650,12 @@ void config_mode(void)
         }
       } else if (get_key_event_short(KEY_ENTER)) {
         mode = 2;
-      } else if (get_key_event_short(KEY_UP)) {
+      } else if (get_key_event_short(KEY_DOWN)) {
         if (param_num+1 < param_max_num) {
           param_num++;
           tm1628.showStr(disp,pSet_order[param_num]->szName);
         }
-      } else if (get_key_event_short(KEY_DOWN)) {
+      } else if (get_key_event_short(KEY_UP)) {
         if (param_num) {
           param_num--;
           tm1628.showStr(disp,pSet_order[param_num]->szName);
@@ -988,6 +988,7 @@ void key_scan(void)
 {  
   static uint32_t long_press_scan_time = millis();  
   static uint8_t old_key_state_lscan = 0;
+  static uint8_t key_state_ldetected = 0;
   uint8_t new_key_state;
 
   new_key_state = tm1628.getButtons();
@@ -1003,17 +1004,13 @@ void key_scan(void)
   
   if (millis() - long_press_scan_time > LONG_PRESS_SCANN_CYCLE) 
   {
-    long_press_scan_time = millis();
+    long_press_scan_time = millis();    
+    key_state_s |= (old_key_state_lscan & ~key_state) & ~key_state_ldetected;
+    key_state_ldetected &= ~(old_key_state_lscan & ~key_state); // clear this long press if ended
     key_state_l |= (old_key_state_lscan & key_state); // new key state for long press
+    key_state_ldetected |= (old_key_state_lscan & key_state); // save this long press
     old_key_state_lscan = key_state;
   }
-  
-#ifdef DEBUG
-  Serial.print("KeyS = 0x");
-  Serial.println(key_state_s,HEX);
-  Serial.print("KeyL = 0x");
-  Serial.println(key_state_l,HEX);
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////
