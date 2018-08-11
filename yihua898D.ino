@@ -399,7 +399,12 @@ void UI_hndl(void)
   
   if (!ha_state.enabled && !si_state.enabled) {
     // Nothing to do
+    sp_mode = 0;
     return;
+  } else if (!ha_state.enabled && sp_mode == DEV_HA) { // Device is disabled now
+    sp_mode = 0;
+  } else if (!si_state.enabled && sp_mode == DEV_SI) { // Device is disabled now
+    sp_mode = 0;
   }
   
   // menu key handling
