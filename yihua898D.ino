@@ -254,7 +254,7 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     }
 #endif
     if (pDev_cfg->dev_type == DEV_HA) { // Only for HA
-      HA_test();
+      pDev_state->test_state = HA_test(TEST_INIT);
     }
        
   } else if (pDev_state->enabled && !get_sw_state(sw_mask)) 
@@ -281,6 +281,10 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
 
   if (pDev_state->enabled)
   {
+    if (pDev_state->test_state != TEST_ALL_OK) { //Startup test is still running
+      pDev_state->test_state = HA_test(pDev_state->test_state);
+      return;
+    }
     pDev_state->adc_raw = analogRead(analog_pin); // need raw value later, store it here and avoid 2nd ADC read
 #ifdef DEBUG
     if (start_time % 1000 == 0)
@@ -452,6 +456,7 @@ void UI_hndl(void)
   static uint8_t sp_mode = 0;
   static uint32_t blink_time = millis();
   static uint8_t blink_state = 0;
+  uint8_t HA_start;
   DEV_CFG *pDev_cfg = NULL;
 
   // Blinking feature
@@ -461,12 +466,18 @@ void UI_hndl(void)
       blink_state = 0;
     }
   }
+
+  if (ha_state.enabled && ha_state.test_state == TEST_ALL_OK) {
+    HA_start = 1;
+  } else {
+    HA_start = 0;
+  }
   
-  if (!ha_state.enabled && !si_state.enabled) {
+  if (!HA_start && !si_state.enabled) {
     // Nothing to do
     sp_mode = 0;
     return;
-  } else if (!ha_state.enabled && sp_mode == DEV_HA) { // Device is disabled now
+  } else if (!HA_start && sp_mode == DEV_HA) { // Device is disabled now
     sp_mode = 0;
   } else if (!si_state.enabled && sp_mode == DEV_SI) { // Device is disabled now
     sp_mode = 0;
@@ -475,7 +486,7 @@ void UI_hndl(void)
   // menu key handling
   if (get_key_event_short(KEY_ENTER)) {
     sp_mode++;
-    if (sp_mode == DEV_HA && !ha_state.enabled) {
+    if (sp_mode == DEV_HA && !HA_start) {
       //HA disabled, skip this state
       sp_mode++;
     } else if (sp_mode == DEV_SI && !si_state.enabled) {
@@ -556,7 +567,7 @@ void UI_hndl(void)
 
 void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t blink_state)
 {
-  if (!pDev_state->enabled) {
+  if (!pDev_state->enabled || pDev_state->test_state != TEST_ALL_OK) {
     return;
   }
 
@@ -591,6 +602,7 @@ void config_mode(void)
   uint8_t disp = 0;  
   uint8_t dev_type = DEV_HA;
   uint8_t param_max_num = 0;
+  uint8_t HA_start;
   CPARAM ** pSet_order = NULL;
   
   HEATERS_OFF;  // security reasons, delay below!
@@ -598,14 +610,20 @@ void config_mode(void)
   watchdog_off();
 #endif
 
+  if (ha_state.enabled && ha_state.test_state == TEST_ALL_OK) {
+    HA_start = 1;
+  } else {
+    HA_start = 0;
+  }
+
   // Check if no device select mode
-  if (ha_state.enabled && !si_state.enabled) {
+  if (HA_start && !si_state.enabled) {
     dev_type = DEV_HA;
     mode = MODE_VAR_SW;
     disp = ha_cfg.disp_n;
     param_max_num = NELEMS(ha_set_order);
     pSet_order = (CPARAM **)&ha_set_order;
-  } else if (!ha_state.enabled && si_state.enabled) {
+  } else if (!HA_start && si_state.enabled) {
     dev_type = DEV_SI;
     mode = MODE_VAR_SW;
     disp = si_cfg.disp_n;
@@ -688,7 +706,7 @@ void config_mode(void)
       // Variable switching mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
         param_num = 0;
-        if (ha_state.enabled ^ si_state.enabled) {
+        if (HA_start ^ si_state.enabled) {
           // Only one device active, exit
           break;
         } else {
@@ -942,24 +960,63 @@ void restore_default_conf(void)
   eep_save(&si_cfg.display_adc_raw);
 }
 
-void HA_test(void)
+// Returns zero if ok
+uint8_t HA_test(uint8_t state)
 {
-  HA_HEATER_OFF;
-  
-  // if the wand is not in the cradle when powered up, go into a safe mode
-  // and display an error
+  uint8_t result;
+  static uint32_t test_start = 0;
 
+  if (millis() - test_start > HA_TEST_CYCLE) {
+    test_start = millis();  
+
+    HA_HEATER_OFF;
+#if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
+    if (state & FAN_TEST_MASK != 0x10) // else skip to fan test
+#endif
+      result = cradle_fail_check(state);
+      if (result != CRADLE_OK) {
+#ifdef DEBUG
+        Serial.print("HA test state: ");
+        Serial.println(state,HEX);
+#endif
+        return result;
+      }
+#if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
+    }
+#endif
+  
+#if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
+    result = fan_fail_check(state);
+    if (result != FAN_OK) {
+#ifdef DEBUG
+      Serial.print("HA test state: ");
+      Serial.println(state,HEX);
+#endif
+      return result;
+    }
+#endif
+
+#ifdef DEBUG
+    Serial.print("HA test state: ");
+    Serial.println(state,HEX);
+#endif
+    return TEST_ALL_OK;
+  } else {
+    return state;
+  }  
 }
 
-// Returns zero if ok
 uint8_t cradle_fail_check(uint8_t state)
 {
-  // if the wand is not in the cradle when powered up, go into a safe mode
+  if (state == CRADLE_OK) {
+    return state; // Test already ended
+  }
+  // If the wand is not in the cradle when powered up, go into a safe mode
   // and display an error
   if (REEDSW_CLOSED) {
     state = CRADLE_OK;
     return state;
-  } else if (!state) {
+  } else if (state == TEST_INIT) {
     //Cradle error
 #ifdef DEBUG
     Serial.println("Cradle error!");
@@ -974,7 +1031,7 @@ uint8_t cradle_fail_check(uint8_t state)
       state = CRADLE_FAIL2;
       break;   
     case CRADLE_FAIL2: 
-      tm1628.showStr(ha_cfg.disp_n,"dLE")
+      tm1628.showStr(ha_cfg.disp_n,"dLE");
       state = CRADLE_FAIL3;
       break;
     case CRADLE_FAIL3:
@@ -995,10 +1052,13 @@ uint8_t cradle_fail_check(uint8_t state)
 uint8_t fan_fail_check(uint8_t state) 
 {  
   uint8_t fan_current;
+  if (state == FAN_OK) {
+    return state; // Test already ended
+  }
   
   switch(state)
   {
-    case FAN_OK: 
+    case TEST_INIT: 
       FAN_ON;
       state = FAN_TEST1;
       break;   

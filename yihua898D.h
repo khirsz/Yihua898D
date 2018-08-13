@@ -143,19 +143,24 @@
 #define MODE_VAR_SW     1
 #define MODE_VAL_SET    2
 
-#define CRADLE_OK       0
-#define CRADLE_FAIL1    1
-#define CRADLE_FAIL2    2
-#define CRADLE_FAIL3    3
+#define HA_TEST_CYCLE   1500
 
+// Must be zero!
+#define TEST_ALL_OK     0x00
+#define TEST_INIT       0x01
+#define CRADLE_OK       0x02
+#define CRADLE_FAIL1    0x03
+#define CRADLE_FAIL2    0x04
+#define CRADLE_FAIL3    0x05
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
-#define FAN_OK          0
-#define FAN_TEST1       1
-#define FAN_TEST2       2
-#define FAN_TEST3       3
-#define FAN_FAIL1       4
-#define FAN_FAIL2       5
-#define FAN_FAIL3       6
+#define FAN_TEST_MASK   0xF0
+#define FAN_OK          0x10
+#define FAN_TEST1       0x11
+#define FAN_TEST2       0x12
+#define FAN_TEST3       0x13
+#define FAN_FAIL1       0x14
+#define FAN_FAIL2       0x15
+#define FAN_FAIL3       0x16
 #endif
 
 #define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
@@ -222,6 +227,8 @@ typedef struct CNTRL_STATE {
   
   uint16_t adc_raw;
 
+  uint8_t test_state;
+
   uint8_t enabled;
 } CNTRL_STATE;
 
@@ -231,7 +238,7 @@ void config_mode(void);
 void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t blink_state);
 void eep_load(CPARAM * param);
 void eep_save(CPARAM * param);
-void HA_test(void);
+uint8_t HA_test(uint8_t state);
 uint8_t cradle_fail_check(uint8_t state);
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
 uint8_t fan_fail_check(uint8_t state);
