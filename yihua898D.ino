@@ -254,7 +254,7 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     }
 #endif
     if (pDev_cfg->dev_type == DEV_HA) { // Only for HA
-      fan_test();
+      HA_test();
     }
        
   } else if (pDev_state->enabled && !get_sw_state(sw_mask)) 
@@ -930,7 +930,6 @@ void restore_default_conf(void)
   si_cfg.temp_offset_corr.value = si_cfg.temp_offset_corr.value_default;
   si_cfg.temp_setpoint.value = si_cfg.temp_setpoint.value_default;
   si_cfg.temp_averages.value = si_cfg.temp_averages.value_default;
-  si_cfg.slp_timeout.value = si_cfg.slp_timeout.value_default;
   si_cfg.display_adc_raw.value = si_cfg.display_adc_raw.value_default;
 
   eep_save(&si_cfg.p_gain);
@@ -940,82 +939,127 @@ void restore_default_conf(void)
   eep_save(&si_cfg.temp_offset_corr);
   eep_save(&si_cfg.temp_setpoint);
   eep_save(&si_cfg.temp_averages);
-  eep_save(&si_cfg.slp_timeout);
   eep_save(&si_cfg.display_adc_raw);
 }
 
-void fan_test(void)
+void HA_test(void)
 {
   HA_HEATER_OFF;
-#ifdef USE_WATCHDOG
-  watchdog_off();
-#endif
+  
   // if the wand is not in the cradle when powered up, go into a safe mode
   // and display an error
-  while (!REEDSW_CLOSED) {
-    tm1628.showStr(DISP_2,"crA");
-    delay(1000);
-    tm1628.showStr(DISP_2,"dLE");
-    delay(2000);
-    tm1628.clear(DISP_2);
-    delay(1000);
+
+}
+
+// Returns zero if ok
+uint8_t cradle_fail_check(uint8_t state)
+{
+  // if the wand is not in the cradle when powered up, go into a safe mode
+  // and display an error
+  if (REEDSW_CLOSED) {
+    state = CRADLE_OK;
+    return state;
+  } else if (!state) {
+    //Cradle error
 #ifdef DEBUG
     Serial.println("Cradle error!");
-    break;
 #endif
-  }
-
-#ifdef CURRENT_SENSE_MOD
-  uint16_t fan_current;
-  FAN_ON;
-  delay(3000);
-  fan_current = analogRead(FAN_CURRENT_PIN);
-
-  if ((fan_current < (uint16_t) (ha_cfg.fan_current_min.value)) || (fan_current > (uint16_t) (ha_cfg.fan_current_max.value))) {
-    // the fan is not working as it should
-    FAN_OFF;
-    while (1) {
-      tm1628.showStr(DISP_2,"FAn");
-      delay(1000);
-      tm1628.showStr(DISP_2,"cur");
-      delay(2000);
-      tm1628.clear(DISP_2);
-      delay(1000);
-#ifdef DEBUG
-      Serial.println("Fan current meas. error!");
-      break;      
-#endif
-    }
-  }
-#elif SPEED_SENSE_MOD       
-  uint16_t fan_speed;
-  FAN_ON;
-  delay(3000);
-  fan_speed = analogRead(FAN_SPEED_PIN);
-
-  if ((fan_speed < (uint16_t) (ha_cfg.fan_speed_min.value)) || (fan_speed > (uint16_t) (ha_cfg.fan_speed_max.value))) {
-    // the fan is not working as it should
-    FAN_OFF;
-    while (1) {
-      tm1628.showStr(DISP_2,"FAn");
-      delay(1000);
-      tm1628.showStr(DISP_2,"SPd");
-      delay(2000);
-      tm1628.clear(DISP_2);
-      delay(1000);
-#ifdef DEBUG
-      Serial.println("Fan speed meas. error!");
+    state = CRADLE_FAIL1;
+  } 
+  
+  switch(state)
+  {
+    case CRADLE_FAIL1: 
+      tm1628.showStr(ha_cfg.disp_n,"crA");
+      state = CRADLE_FAIL2;
+      break;   
+    case CRADLE_FAIL2: 
+      tm1628.showStr(ha_cfg.disp_n,"dLE")
+      state = CRADLE_FAIL3;
       break;
+    case CRADLE_FAIL3:
+      tm1628.clear(ha_cfg.disp_n);
+#ifdef DEBUG
+      // Skip safe mode in debug!
+      state = CRADLE_OK;
+      return state;
 #endif
-    }
+      state = CRADLE_FAIL1;
+      break;
   }
-#endif
-
-  FAN_OFF;
-#ifdef USE_WATCHDOG
-  watchdog_on();
-#endif
+  
+  return state;
 }
+
+#if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
+uint8_t fan_fail_check(uint8_t state) 
+{  
+  uint8_t fan_current;
+  
+  switch(state)
+  {
+    case FAN_OK: 
+      FAN_ON;
+      state = FAN_TEST1;
+      break;   
+    case FAN_TEST1: 
+      state = FAN_TEST2;
+      break; 
+    case FAN_TEST2: 
+      state = FAN_TEST3;
+      break; 
+    case FAN_TEST3: 
+#ifdef CURRENT_SENSE_MOD
+      fan_current = analogRead(FAN_CURRENT_PIN);
+      FAN_OFF;
+      if ((fan_current < (uint16_t) (ha_cfg.fan_current_min.value)) 
+          || (fan_current > (uint16_t) (ha_cfg.fan_current_max.value))) {
+        // FAN fail !
+        state = FAN_FAIL1;        
+#ifdef DEBUG
+        Serial.println("Fan current meas. error!");
+#endif
+#elif SPEED_SENSE_MOD
+      fan_current = analogRead(FAN_SPEED_PIN);
+      FAN_OFF;
+      if ((fan_speed < (uint16_t) (ha_cfg.fan_speed_min.value)) 
+          || (fan_speed > (uint16_t) (ha_cfg.fan_speed_max.value))) {
+        // FAN fail !
+        state = FAN_FAIL1;        
+#ifdef DEBUG
+        Serial.println("Fan speed meas. error!");
+#endif
+#endif
+      } else {
+        state = FAN_OK;
+      }
+      break;
+    case FAN_FAIL1:     
+      tm1628.showStr(ha_cfg.disp_n,"FAn");
+      state = FAN_FAIL2;
+      break;         
+    case FAN_FAIL2: 
+#ifdef CURRENT_SENSE_MOD
+      tm1628.showStr(ha_cfg.disp_n,"cur");
+#elif SPEED_SENSE_MOD
+      tm1628.showStr(ha_cfg.disp_n,"SPd")
+#endif
+      state = FAN_FAIL3;
+      break;
+    case FAN_FAIL3:
+      tm1628.clear(ha_cfg.disp_n);
+#ifdef DEBUG
+      // Skip safe mode in debug!
+      state = FAN_OK;
+      return state;
+#endif
+      state = FAN_FAIL1;
+      break;
+  }
+  
+  return state;
+}
+#endif
 
 void show_firmware_version(void)
 {
