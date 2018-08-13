@@ -23,7 +23,7 @@
 #define DEBUG
 
 //#define CURRENT_SENSE_MOD
-//#define SPEED_SENSE_MOD
+#define SPEED_SENSE_MOD
 
 #define USE_WATCHDOG
 //#define WATCHDOG_TEST
@@ -54,7 +54,7 @@
 
 #ifdef CURRENT_SENSE_MOD
 #define FAN_CURRENT_PIN   A2
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
 #define FAN_SPEED_PIN     A2
 #endif
 
@@ -195,7 +195,7 @@ typedef struct DEV_CFG {
 #ifdef CURRENT_SENSE_MOD
   CPARAM fan_current_min;
   CPARAM fan_current_max;
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   //
   // See 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case

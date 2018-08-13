@@ -86,7 +86,7 @@ DEV_CFG ha_cfg = {
 #ifdef CURRENT_SENSE_MOD
   /* fan_current_min */  { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 22, 23, "FcL"},
   /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25, "FcH"},
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   //
   // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
@@ -102,7 +102,7 @@ CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_c
                                       &ha_cfg.temp_offset_corr, &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
 #ifdef CURRENT_SENSE_MOD
                                       &ha_cfg.fan_current_min, &ha_cfg.fan_current_max,
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
                                       &ha_cfg.fan_speed_min, &ha_cfg.fan_speed_max,
 #endif
                                       };
@@ -123,7 +123,7 @@ DEV_CFG si_cfg = {
 #ifdef CURRENT_SENSE_MOD
   /* fan_current_min */  CPARAM_NULL,
   /* fan_current_max */  CPARAM_NULL,
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   //
   // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
@@ -794,7 +794,7 @@ void setup_HW(void)
 
 #ifdef CURRENT_SENSE_MOD
   pinMode(FAN_CURRENT_PIN, INPUT);  // set as input
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   pinMode(FAN_SPEED_PIN, INPUT);  // set as input
 #endif
 
@@ -827,7 +827,7 @@ void setup_HW(void)
 #ifdef CURRENT_SENSE_MOD
       fan = analogRead(FAN_CURRENT_PIN);
       tm1628.showNum(DISP_2,fan);
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
       fan = analogRead(FAN_SPEED_PIN);
       tm1628.showNum(DISP_2,fan);
 #endif        //CURRENT_SENSE_MOD
@@ -859,7 +859,7 @@ void load_cfg(void)
 #ifdef CURRENT_SENSE_MOD
   eep_load(&ha_cfg.fan_current_min);
   eep_load(&ha_cfg.fan_current_max);
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   eep_load(&ha_cfg.fan_speed_min);
   eep_load(&ha_cfg.fan_speed_max);
 #endif
@@ -917,7 +917,7 @@ void restore_default_conf(void)
 #ifdef CURRENT_SENSE_MOD
   ha_cfg.fan_current_min.value = ha_cfg.fan_current_min.value_default;
   ha_cfg.fan_current_max.value = ha_cfg.fan_current_max.value_default;
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   ha_cfg.fan_speed_min.value = ha_cfg.fan_speed_min.value_default;
   ha_cfg.fan_speed_max.value = ha_cfg.fan_speed_max.value_default;
 #endif
@@ -935,7 +935,7 @@ void restore_default_conf(void)
 #ifdef CURRENT_SENSE_MOD
   eep_save(&ha_cfg.fan_current_min);
   eep_save(&ha_cfg.fan_current_max);
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
   eep_save(&ha_cfg.fan_speed_min);
   eep_save(&ha_cfg.fan_speed_max);
 #endif
@@ -971,7 +971,7 @@ uint8_t HA_test(uint8_t state)
 
     HA_HEATER_OFF;
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
-    if (state & FAN_TEST_MASK != 0x10) // else skip to fan test
+    if (state & FAN_TEST_MASK != 0x10) {// else skip to fan test
 #endif
       result = cradle_fail_check(state);
       if (result != CRADLE_OK) {
@@ -1000,6 +1000,7 @@ uint8_t HA_test(uint8_t state)
     Serial.print("HA test state: ");
     Serial.println(state,HEX);
 #endif
+    key_event_clear();
     return TEST_ALL_OK;
   } else {
     return state;
@@ -1061,14 +1062,18 @@ uint8_t fan_fail_check(uint8_t state)
     case TEST_INIT: 
       FAN_ON;
       state = FAN_TEST1;
+      tm1628.setDot(ha_cfg.disp_n,2);
       break;   
     case FAN_TEST1: 
       state = FAN_TEST2;
+      tm1628.setDot(ha_cfg.disp_n,1);
       break; 
     case FAN_TEST2: 
       state = FAN_TEST3;
+      tm1628.setDot(ha_cfg.disp_n,0);
       break; 
     case FAN_TEST3: 
+      tm1628.clear(ha_cfg.disp_n);
 #ifdef CURRENT_SENSE_MOD
       fan_current = analogRead(FAN_CURRENT_PIN);
       FAN_OFF;
@@ -1079,11 +1084,11 @@ uint8_t fan_fail_check(uint8_t state)
 #ifdef DEBUG
         Serial.println("Fan current meas. error!");
 #endif
-#elif SPEED_SENSE_MOD
+#elif defined(SPEED_SENSE_MOD)
       fan_current = analogRead(FAN_SPEED_PIN);
       FAN_OFF;
-      if ((fan_speed < (uint16_t) (ha_cfg.fan_speed_min.value)) 
-          || (fan_speed > (uint16_t) (ha_cfg.fan_speed_max.value))) {
+      if ((fan_current < (uint16_t) (ha_cfg.fan_speed_min.value)) 
+          || (fan_current > (uint16_t) (ha_cfg.fan_speed_max.value))) {
         // FAN fail !
         state = FAN_FAIL1;        
 #ifdef DEBUG
@@ -1101,8 +1106,8 @@ uint8_t fan_fail_check(uint8_t state)
     case FAN_FAIL2: 
 #ifdef CURRENT_SENSE_MOD
       tm1628.showStr(ha_cfg.disp_n,"cur");
-#elif SPEED_SENSE_MOD
-      tm1628.showStr(ha_cfg.disp_n,"SPd")
+#elif defined(SPEED_SENSE_MOD)
+      tm1628.showStr(ha_cfg.disp_n,"SPd");
 #endif
       state = FAN_FAIL3;
       break;
