@@ -602,7 +602,6 @@ void config_mode(void)
   uint8_t disp = 0;  
   uint8_t dev_type = DEV_HA;
   uint8_t param_max_num = 0;
-  uint8_t HA_start;
   CPARAM ** pSet_order = NULL;
   
   HEATERS_OFF;  // security reasons, delay below!
@@ -610,20 +609,18 @@ void config_mode(void)
   watchdog_off();
 #endif
 
-  if (ha_state.enabled && ha_state.test_state == TEST_ALL_OK) {
-    HA_start = 1;
-  } else {
-    HA_start = 0;
+  if (ha_state.enabled && ha_state.test_state != TEST_ALL_OK) { // Test fail or in progress, exit
+    return;
   }
 
   // Check if no device select mode
-  if (HA_start && !si_state.enabled) {
+  if (ha_state.enabled && !si_state.enabled) {
     dev_type = DEV_HA;
     mode = MODE_VAR_SW;
     disp = ha_cfg.disp_n;
     param_max_num = NELEMS(ha_set_order);
     pSet_order = (CPARAM **)&ha_set_order;
-  } else if (!HA_start && si_state.enabled) {
+  } else if (!ha_state.enabled && si_state.enabled) {
     dev_type = DEV_SI;
     mode = MODE_VAR_SW;
     disp = si_cfg.disp_n;
@@ -706,7 +703,7 @@ void config_mode(void)
       // Variable switching mode
       if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
         param_num = 0;
-        if (HA_start ^ si_state.enabled) {
+        if (ha_state.enabled ^ si_state.enabled) {
           // Only one device active, exit
           break;
         } else {

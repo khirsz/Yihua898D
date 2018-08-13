@@ -23,7 +23,7 @@
 #define DEBUG
 
 //#define CURRENT_SENSE_MOD
-#define SPEED_SENSE_MOD
+//#define SPEED_SENSE_MOD
 
 #define USE_WATCHDOG
 //#define WATCHDOG_TEST
