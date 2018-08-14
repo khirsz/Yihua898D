@@ -126,7 +126,7 @@ DEV_CFG si_cfg = {
   /* fan_current_max */  CPARAM_NULL,
 #elif defined(SPEED_SENSE_MOD)
   //
-  // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
+  // See yihua898D.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
   //
   /* fan_speed_min */    CPARAM_NULL,
@@ -610,8 +610,8 @@ void config_mode(void)
   watchdog_off();
 #endif
 
-  if (ha_state.enabled && ha_state.test_state != TEST_ALL_OK) { // Test fail or in progress, exit
-    return;
+  if (ha_state.enabled && ha_state.test_state != TEST_ALL_OK) { // Test fail or in progress, restart it
+    ha_state.test_state = TEST_INIT;
   }
 
   // Check if no device select mode
