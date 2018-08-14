@@ -1,9 +1,10 @@
 /*
- * This is a custom firmware for my 'Youyue 858D+' hot-air soldering station.
+ * This is a custom firmware for my 'Yihua 898D' hot-air soldering station.
  * It may or may not be useful to you, always double check if you use it.
  *
- * V2.46
+ * V2.5.0
  *
+ * 2018    - Karol Hirsz
  * 2015/16 - Robert Spitzenpfeil
  * 2015    - Moritz Augsburger
  *
@@ -68,8 +69,8 @@ const char wdt_signature [] = "WDT_RESET";
 char * p = (char *) malloc(sizeof(wdt_signature));
 #endif
 
-// define a module on data pin 8, clock pin 9 and strobe pin 7
-TM1628 tm1628(8, 9, 7);
+// define a tm1628 module
+TM1628 tm1628(DATA_PIN, SCLK_PIN, STB_PIN);
 
 // HOT AIR configuration
 DEV_CFG ha_cfg = {

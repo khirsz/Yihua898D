@@ -20,13 +20,18 @@
 #include "TM1628.h"
 
  
-#define DEBUG
+//#define DEBUG
 
 //#define CURRENT_SENSE_MOD
 //#define SPEED_SENSE_MOD
 
 #define USE_WATCHDOG
 //#define WATCHDOG_TEST
+
+//TM1628 pins
+#define DATA_PIN  8
+#define SCLK_PIN  9
+#define STB_PIN   7
 
 #define FAN_PIN   4 
 #define FAN_INIT  pinMode(FAN_PIN, OUTPUT)
@@ -81,8 +86,6 @@
 #define BLINK_CYCLE       75
 #define BLINK_STATE_MAX   10
 
-#define SHOW_SETPOINT_TIMEOUT 2000L
-
 #define PWM_CYCLES 512L
 #define HEATER_DUTY_CYCLE_MAX PWM_CYCLES
 
@@ -130,7 +133,7 @@
 #define FAN_CURRENT_MIN_DEFAULT 30UL
 #define FAN_CURRENT_MAX_DEFAULT 71UL
 
-#define SLP_TIMEOUT_DEFAULT 10
+#define SLP_TIMEOUT_DEFAULT 20
 
 #define BUTTON_SCANN_CYCLE        100
 #define LONG_PRESS_SCANN_CYCLE    200
