@@ -48,8 +48,8 @@
  */
 
 #define FW_MAJOR_V 2
-#define FW_MINOR_V_A 4
-#define FW_MINOR_V_B 6
+#define FW_MINOR_V_A 5
+#define FW_MINOR_V_B 0
 /*
  * #21: AREF <--- about 3.3V as analogue reference for ADC, i.e. from Arduino 3.3V pin.
  */
