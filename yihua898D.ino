@@ -812,6 +812,9 @@ void setup_HW(void)
 
   if (get_key_state(KEY_DOWN) && get_key_state(KEY_UP)) {
     restore_default_conf();
+#ifdef DEBUG
+  Serial.println("Default config loaded");
+#endif
   } else if (get_key_state(KEY_UP)) {
     tm1628.showStr(DISP_2,"FAn");
     delay(1000);
@@ -901,6 +904,11 @@ void eep_load(CPARAM * param)
 
 void restore_default_conf(void)
 {
+  tm1628.showStr(DISP_2,"dEF");
+  delay(1000);
+  tm1628.showStr(DISP_1,"CFg");
+  delay(1000);
+  tm1628.clear(DISP_ALL);
   ha_cfg.p_gain.value = ha_cfg.p_gain.value_default;
   ha_cfg.i_gain.value = ha_cfg.i_gain.value_default;
   ha_cfg.d_gain.value = ha_cfg.d_gain.value_default;
