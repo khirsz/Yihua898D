@@ -976,7 +976,7 @@ void restore_default_conf(void)
 // Returns zero if ok
 uint8_t HA_test(uint8_t state)
 {
-  uint8_t result;
+  uint8_t result = TEST_INIT;
   static uint32_t test_start = 0;
 
   if (millis() - test_start > HA_TEST_CYCLE) {
@@ -987,13 +987,13 @@ uint8_t HA_test(uint8_t state)
       tm1628.clear(ha_cfg.disp_n);
     }
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
-    if (state & FAN_TEST_MASK != 0x10) {// else skip to fan test
+    if ((state & FAN_TEST_MASK) != 0x10) {// else skip to fan test
 #endif
       result = cradle_fail_check(state);
       if (result != CRADLE_OK) {
 #ifdef DEBUG
         Serial.print("HA test state: ");
-        Serial.println(state,HEX);
+        Serial.println(result,HEX);
 #endif
         return result;
       }
@@ -1002,11 +1002,17 @@ uint8_t HA_test(uint8_t state)
 #endif
   
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
-    result = fan_fail_check(state);
+    if (result == CRADLE_OK) {
+      // Init fan test
+      tm1628.clear(ha_cfg.disp_n);
+      result = fan_fail_check(TEST_INIT);
+    } else {
+      result = fan_fail_check(state);
+    }
     if (result != FAN_OK) {
 #ifdef DEBUG
       Serial.print("HA test state: ");
-      Serial.println(state,HEX);
+      Serial.println(result,HEX);
 #endif
       return result;
     }
@@ -1014,7 +1020,7 @@ uint8_t HA_test(uint8_t state)
 
 #ifdef DEBUG
     Serial.print("HA test state: ");
-    Serial.println(state,HEX);
+    Serial.println(TEST_ALL_OK,HEX);
 #endif
     key_event_clear();
     return TEST_ALL_OK;
@@ -1045,7 +1051,7 @@ uint8_t cradle_fail_check(uint8_t state)
   {
     case CRADLE_FAIL1: 
       tm1628.showStr(ha_cfg.disp_n,"crA");
-      state = CRADLE_FAIL2;
+      state = CRADLE_FAIL2;      
       break;   
     case CRADLE_FAIL2: 
       tm1628.showStr(ha_cfg.disp_n,"dLE");
@@ -1055,8 +1061,8 @@ uint8_t cradle_fail_check(uint8_t state)
       tm1628.clear(ha_cfg.disp_n);
 #ifdef DEBUG
       // Skip safe mode in debug!
-      state = CRADLE_OK;
-      return state;
+      //state = CRADLE_OK;
+      //return state;
 #endif
       state = CRADLE_FAIL1;
       break;
@@ -1131,8 +1137,8 @@ uint8_t fan_fail_check(uint8_t state)
       tm1628.clear(ha_cfg.disp_n);
 #ifdef DEBUG
       // Skip safe mode in debug!
-      state = FAN_OK;
-      return state;
+      //state = FAN_OK;
+      //return state;
 #endif
       state = FAN_FAIL1;
       break;
