@@ -89,7 +89,7 @@ DEV_CFG ha_cfg = {
   /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25, "FcH"},
 #elif defined(SPEED_SENSE_MOD)
   //
-  // See youyue858d.h if you want to use the 'FAN-speed mod' (HW changes required)
+  // See yihua898d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
   //
   /* fan_speed_min */    { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 18, 19, "FSL"},
@@ -277,7 +277,7 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
 #endif
     tm1628.clear(pDev_cfg->disp_n);
     // Clear state
-    init_state(&ha_state);
+    init_state(pDev_state);
   }
 
   if (pDev_state->enabled)
@@ -475,9 +475,16 @@ void UI_hndl(void)
   }
   
   if (!HA_start && !si_state.enabled) {
-    // Nothing to do
-    sp_mode = 0;
-    return;
+    if (ha_state.enabled) {
+      // Configuration mode is possible in test state of HA
+      if (get_key_event_long(KEY_UP | KEY_DOWN)) {
+        config_mode();
+      }
+    } else {
+      // Nothing to do
+      sp_mode = 0;
+      return;
+    }
   } else if (!HA_start && sp_mode == DEV_HA) { // Device is disabled now
     sp_mode = 0;
   } else if (!si_state.enabled && sp_mode == DEV_SI) { // Device is disabled now
@@ -976,6 +983,9 @@ uint8_t HA_test(uint8_t state)
     test_start = millis();  
 
     HA_HEATER_OFF;
+    if (state == TEST_INIT) {
+      tm1628.clear(ha_cfg.disp_n);
+    }
 #if defined(CURRENT_SENSE_MOD) || defined(SPEED_SENSE_MOD)
     if (state & FAN_TEST_MASK != 0x10) {// else skip to fan test
 #endif
