@@ -475,16 +475,15 @@ void UI_hndl(void)
   }
   
   if (!HA_start && !si_state.enabled) {
+    sp_mode = 0; 
     if (ha_state.enabled) {
       // Configuration mode is possible in test state of HA
       if (get_key_event_long(KEY_UP | KEY_DOWN)) {
         config_mode();
       }
-    } else {
-      // Nothing to do
-      sp_mode = 0;
-      return;
     }
+    // Nothing to do        
+    return;
   } else if (!HA_start && sp_mode == DEV_HA) { // Device is disabled now
     sp_mode = 0;
   } else if (!si_state.enabled && sp_mode == DEV_SI) { // Device is disabled now
@@ -1061,8 +1060,8 @@ uint8_t cradle_fail_check(uint8_t state)
       tm1628.clear(ha_cfg.disp_n);
 #ifdef DEBUG
       // Skip safe mode in debug!
-      //state = CRADLE_OK;
-      //return state;
+      state = CRADLE_OK;
+      return state;
 #endif
       state = CRADLE_FAIL1;
       break;
@@ -1137,8 +1136,8 @@ uint8_t fan_fail_check(uint8_t state)
       tm1628.clear(ha_cfg.disp_n);
 #ifdef DEBUG
       // Skip safe mode in debug!
-      //state = FAN_OK;
-      //return state;
+      state = FAN_OK;
+      return state;
 #endif
       state = FAN_FAIL1;
       break;
