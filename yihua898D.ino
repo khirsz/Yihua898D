@@ -254,6 +254,8 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
       Serial.println("SI on!");
     }
 #endif
+    // Clear old presses
+    key_event_clear();
     if (pDev_cfg->dev_type == DEV_HA) { // Only for HA
       pDev_state->test_state = HA_test(TEST_INIT);
     }
