@@ -74,33 +74,36 @@ TM1628 tm1628(DATA_PIN, SCLK_PIN, STB_PIN);
 
 // HOT AIR configuration
 DEV_CFG ha_cfg = {
-  /* device type */      DEV_HA,
-  /* display number */   DISP_2,
-  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
-  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
-  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9, "ItH"},
-  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 10, 11, "toF"},
-  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 14, 15, "Avg"},
-  /* slp_timeout */      { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 16, 17, "SLP"},
-  /* display_adc_raw */  { 0, 1, 0, 0, 28, 29, "Adc"},
-#ifdef CURRENT_SENSE_MOD
-  /* fan_current_min */  { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 22, 23, "FcL"},
-  /* fan_current_max */  { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 24, 25, "FcH"},
+  /* device type */        DEV_HA,
+  /* display number */     DISP_2,
+  /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 10, 11, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 12, 13, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 14, 15, "toF"},
+  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 16, 17, "Avg"},
+  /* slp_timeout */        { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 18, 19, "SLP"},
+  /* display_adc_raw */    { 0, 1, 0, 0, 20, 21, "Adc"},
+#ifdef CURRENT_SENSE_MOD   
+  /* fan_current_min */    { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 24, 25, "FcL"},
+  /* fan_current_max */    { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 26, 27, "FcH"},
 #elif defined(SPEED_SENSE_MOD)
   //
   // See yihua898d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
   //
-  /* fan_speed_min */    { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 18, 19, "FSL"},
-  /* fan_speed_max */    { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 20, 21, "FSH"},
+  /* fan_speed_min */      { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 28, 29, "FSL"},
+  /* fan_speed_max */      { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 30, 31, "FSH"},
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 12, 13, "SP"},
-  /* fan_only */         { 0, 1, 0, 0, 26, 27, "FnO"},
+  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 22, 23, "StP"},
+  /* fan_only */           { 0, 1, 0, 0, 26, 27, "FnO"},
 };
 CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_cfg.i_thresh,
-                                      &ha_cfg.temp_offset_corr, &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
+                                      &ha_cfg.temp_gain_int_corr, &ha_cfg.temp_gain_dec_corr, &ha_cfg.temp_offset_corr, 
+                                      &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
 #ifdef CURRENT_SENSE_MOD
                                       &ha_cfg.fan_current_min, &ha_cfg.fan_current_max,
 #elif defined(SPEED_SENSE_MOD)
@@ -111,33 +114,32 @@ CNTRL_STATE ha_state;
 
 // SOLDERING IRON configuration
 DEV_CFG si_cfg = {
-  /* device type */      DEV_SI,
-  /* display number */   DISP_1,
-  /* p_gain */           { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 30, 31, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* i_gain */           { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 32, 33, "I"},
-  /* d_gain */           { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 34, 35, "d"},
-  /* i_thresh */         { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 36, 37, "ItH"},
-  /* temp_offset_corr */ { -100, 100, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 38, 39, "toF"},
-  /* temp_averages */    { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 40, 41, "Avg"},
-  /* slp_timeout */      CPARAM_NULL,
-  /* display_adc_raw */  { 0, 1, 0, 0, 44, 45, "Adc"},
+  /* device type */        DEV_SI,
+  /* display number */     DISP_1,
+  /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 100, 101, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 102, 103, "I"},
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 14, 105, "d"},
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 106, 107, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 108, 109, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 110, 111, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 112, 113, "toF"},
+  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 114, 115, "Avg"},
+  /* slp_timeout */        CPARAM_NULL,
+  /* display_adc_raw */    { 0, 1, 0, 0, 116, 117, "Adc"},
 #ifdef CURRENT_SENSE_MOD
-  /* fan_current_min */  CPARAM_NULL,
-  /* fan_current_max */  CPARAM_NULL,
+  /* fan_current_min */    CPARAM_NULL,
+  /* fan_current_max */    CPARAM_NULL,
 #elif defined(SPEED_SENSE_MOD)
-  //
-  // See yihua898D.h if you want to use the 'FAN-speed mod' (HW changes required)
-  // The following 2 CPARAM lines need changes in that case
-  //
-  /* fan_speed_min */    CPARAM_NULL,
-  /* fan_speed_max */    CPARAM_NULL,
+  /* fan_speed_min */      CPARAM_NULL,
+  /* fan_speed_max */      CPARAM_NULL,
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */    { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 46, 47, "SP"},
-  /* fan_only */         CPARAM_NULL,
+  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 118, 119, "StP"},
+  /* fan_only */           CPARAM_NULL,
 };
 CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
-                                      &si_cfg.temp_offset_corr, &si_cfg.temp_averages, &si_cfg.display_adc_raw,};
+                                      &si_cfg.temp_gain_int_corr, &si_cfg.temp_gain_dec_corr, &si_cfg.temp_offset_corr, 
+                                      &si_cfg.temp_averages, &si_cfg.display_adc_raw,};
 CNTRL_STATE si_state;
 
 volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: key pressed
@@ -302,7 +304,14 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     }
 #endif
 
-    pDev_state->temp_inst = pDev_state->adc_raw + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
+    if (pDev_cfg->temp_gain_dec_corr.value == 0) { // no decimal part of the gain coefficient 
+      pDev_state->temp_inst = pDev_state->adc_raw * pDev_cfg->temp_gain_int_corr.value 
+                               + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
+    } else {
+      pDev_state->temp_inst = ((int16_t)((((int32_t)pDev_state->adc_raw) * ((int32_t)pDev_cfg->temp_gain_int_corr.value) 
+                               * ((int32_t)pDev_cfg->temp_gain_dec_corr.value)) / ((int32_t)1000))) 
+                               + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
+    }
 
     if (pDev_state->temp_inst < 0) {
       pDev_state->temp_inst = 0;
@@ -861,6 +870,8 @@ void load_cfg(void)
   eep_load(&ha_cfg.i_gain);
   eep_load(&ha_cfg.d_gain);
   eep_load(&ha_cfg.i_thresh);
+  eep_load(&ha_cfg.temp_gain_int_corr);
+  eep_load(&ha_cfg.temp_gain_dec_corr);
   eep_load(&ha_cfg.temp_offset_corr);
   eep_load(&ha_cfg.temp_setpoint);
   eep_load(&ha_cfg.temp_averages);
@@ -879,6 +890,8 @@ void load_cfg(void)
   eep_load(&si_cfg.i_gain);
   eep_load(&si_cfg.d_gain);
   eep_load(&si_cfg.i_thresh);
+  eep_load(&si_cfg.temp_gain_int_corr);
+  eep_load(&si_cfg.temp_gain_dec_corr);
   eep_load(&si_cfg.temp_offset_corr);
   eep_load(&si_cfg.temp_setpoint);
   eep_load(&si_cfg.temp_averages);
@@ -924,6 +937,8 @@ void restore_default_conf(void)
   ha_cfg.i_gain.value = ha_cfg.i_gain.value_default;
   ha_cfg.d_gain.value = ha_cfg.d_gain.value_default;
   ha_cfg.i_thresh.value = ha_cfg.i_thresh.value_default;
+  ha_cfg.temp_gain_int_corr.value = ha_cfg.temp_gain_int_corr.value_default;
+  ha_cfg.temp_gain_dec_corr.value = ha_cfg.temp_gain_dec_corr.value_default;
   ha_cfg.temp_offset_corr.value = ha_cfg.temp_offset_corr.value_default;
   ha_cfg.temp_setpoint.value = ha_cfg.temp_setpoint.value_default;
   ha_cfg.temp_averages.value = ha_cfg.temp_averages.value_default;
@@ -942,6 +957,8 @@ void restore_default_conf(void)
   eep_save(&ha_cfg.i_gain);
   eep_save(&ha_cfg.d_gain);
   eep_save(&ha_cfg.i_thresh);
+  eep_save(&ha_cfg.temp_gain_int_corr);
+  eep_save(&ha_cfg.temp_gain_dec_corr);
   eep_save(&ha_cfg.temp_offset_corr);
   eep_save(&ha_cfg.temp_setpoint);
   eep_save(&ha_cfg.temp_averages);
@@ -961,6 +978,8 @@ void restore_default_conf(void)
   si_cfg.i_gain.value = si_cfg.i_gain.value_default;
   si_cfg.d_gain.value = si_cfg.d_gain.value_default;
   si_cfg.i_thresh.value = si_cfg.i_thresh.value_default;
+  si_cfg.temp_gain_int_corr.value = si_cfg.temp_gain_int_corr.value_default;
+  si_cfg.temp_gain_dec_corr.value = si_cfg.temp_gain_dec_corr.value_default;
   si_cfg.temp_offset_corr.value = si_cfg.temp_offset_corr.value_default;
   si_cfg.temp_setpoint.value = si_cfg.temp_setpoint.value_default;
   si_cfg.temp_averages.value = si_cfg.temp_averages.value_default;
@@ -970,6 +989,8 @@ void restore_default_conf(void)
   eep_save(&si_cfg.i_gain);
   eep_save(&si_cfg.d_gain);
   eep_save(&si_cfg.i_thresh);
+  eep_save(&si_cfg.temp_gain_int_corr);
+  eep_save(&si_cfg.temp_gain_dec_corr);
   eep_save(&si_cfg.temp_offset_corr);
   eep_save(&si_cfg.temp_setpoint);
   eep_save(&si_cfg.temp_averages);

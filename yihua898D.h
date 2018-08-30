@@ -97,8 +97,10 @@
 #define I_GAIN_SCALING 10000.0
 #define D_GAIN_SCALING 25.0
 
-#define TEMP_OFFSET_CORR_DEFAULT 33
-#define TEMP_SETPOINT_DEFAULT 75
+#define TEMP_GAIN_INT_CORR_DEFAULT 1
+#define TEMP_GAIN_DEC_CORR_DEFAULT 0
+#define TEMP_OFFSET_CORR_DEFAULT   0
+#define TEMP_SETPOINT_DEFAULT      75
 
 #define TEMP_AVERAGES_DEFAULT 250L
 #define TEMP_REACHED_MARGIN 3
@@ -191,6 +193,8 @@ typedef struct DEV_CFG {
   CPARAM i_gain;
   CPARAM d_gain;
   CPARAM i_thresh;
+  CPARAM temp_gain_int_corr;
+  CPARAM temp_gain_dec_corr;
   CPARAM temp_offset_corr;
   CPARAM temp_averages;
   CPARAM slp_timeout;
