@@ -149,9 +149,14 @@ volatile uint8_t sw_state = 0; // debounced switch state: bit = 1: sw on
 
 void setup()
 {
+  setup_HW();
+  
 #ifdef USE_WATCHDOG
   watchdog_off();
 #endif
+
+  init_state(&ha_state);
+  init_state(&si_state);
 
 #ifdef DEBUG
   Serial.begin(9600);
@@ -159,11 +164,44 @@ void setup()
 #endif
   
   tm1628.begin(ON, LED_POW); 
-    
-  setup_HW();
 
-  init_state(&ha_state);
-  init_state(&si_state);
+  if (EEPROM.read(0) != 0x22) {
+    // check if the firmware was just flashed and the EEPROM is therefore empty
+    // assumption: full chip erase with ISP programmer (preserve eeprom fuse NOT set!)
+    // if so, restore default parameter values & write a 'hint' to address 0
+    restore_default_conf();
+    EEPROM.write(0, 0x22);
+#ifdef DEBUG
+  Serial.println("Default config loaded");
+#endif
+  }
+  
+  key_scan();
+
+  if (get_key_state(KEY_DOWN) && get_key_state(KEY_UP)) {
+    restore_default_conf();
+#ifdef DEBUG
+    Serial.println("Default config loaded");
+#endif
+  } else if (get_key_state(KEY_UP)) {
+    tm1628.showStr(DISP_2,"FAn");
+    delay(1000);
+    tm1628.showStr(DISP_2,"tSt");
+    delay(1000);
+    FAN_ON;
+    while (1) {
+      uint16_t fan;
+      delay(500);
+#ifdef CURRENT_SENSE_MOD
+      fan = analogRead(FAN_CURRENT_PIN);
+      tm1628.showNum(DISP_2,fan);
+#elif defined(SPEED_SENSE_MOD)
+      fan = analogRead(FAN_SPEED_PIN);
+      tm1628.showNum(DISP_2,fan);
+#endif        //CURRENT_SENSE_MOD
+      
+    }
+  }
   
   load_cfg();
 
@@ -815,46 +853,7 @@ void setup_HW(void)
   pinMode(FAN_SPEED_PIN, INPUT);  // set as input
 #endif
 
-  analogReference(EXTERNAL);  // use external 3.3V (i.e. from Arduino pin) as ADC reference voltage
-
-  if (EEPROM.read(0) != 0x22) {
-    // check if the firmware was just flashed and the EEPROM is therefore empty
-    // assumption: full chip erase with ISP programmer (preserve eeprom fuse NOT set!)
-    // if so, restore default parameter values & write a 'hint' to address 0
-    restore_default_conf();
-    EEPROM.write(0, 0x22);
-#ifdef DEBUG
-  Serial.println("Default config loaded");
-#endif
-  }
-  
-  key_scan();
-
-  if (get_key_state(KEY_DOWN) && get_key_state(KEY_UP)) {
-    restore_default_conf();
-#ifdef DEBUG
-  Serial.println("Default config loaded");
-#endif
-  } else if (get_key_state(KEY_UP)) {
-    tm1628.showStr(DISP_2,"FAn");
-    delay(1000);
-    tm1628.showStr(DISP_2,"tSt");
-    delay(1000);
-    FAN_ON;
-    while (1) {
-      uint16_t fan;
-      delay(500);
-#ifdef CURRENT_SENSE_MOD
-      fan = analogRead(FAN_CURRENT_PIN);
-      tm1628.showNum(DISP_2,fan);
-#elif defined(SPEED_SENSE_MOD)
-      fan = analogRead(FAN_SPEED_PIN);
-      tm1628.showNum(DISP_2,fan);
-#endif        //CURRENT_SENSE_MOD
-      
-    }
-  }
-  
+  analogReference(EXTERNAL);  // use external 3.3V (i.e. from Arduino pin) as ADC reference voltage  
 }
 
 void init_state(CNTRL_STATE *pDev_state) {
