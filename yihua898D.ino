@@ -593,7 +593,9 @@ void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t bli
       tm1628.showNum(pDev_cfg->disp_n, pDev_state->temp_average);
     }
   } else if (pDev_cfg->display_adc_raw.value == 1) {
-    tm1628.showNum(pDev_cfg->disp_n, pDev_state->adc_raw);
+    if ((blink_state % 5) == 0) { // Avoid too fast changes
+      tm1628.showNum(pDev_cfg->disp_n, pDev_state->adc_raw);
+    }
   } else if (abs((int16_t) (pDev_state->temp_average) - (int16_t) (pDev_cfg->temp_setpoint.value)) < TEMP_REACHED_MARGIN) {
     tm1628.showNum(pDev_cfg->disp_n, pDev_cfg->temp_setpoint.value);  // avoid showing insignificant fluctuations on the display (annoying)
   } else {
