@@ -284,7 +284,7 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
 
   if (pDev_state->enabled)
   {
-    if (pDev_state->test_state != TEST_ALL_OK) { //Startup test is still running
+    if (pDev_cfg->dev_type == DEV_HA && pDev_state->test_state != TEST_ALL_OK) { //Startup test is still running
       pDev_state->test_state = HA_test(pDev_state->test_state);
       return;
     }
