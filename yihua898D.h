@@ -97,6 +97,9 @@
 #define I_GAIN_SCALING 10000.0
 #define D_GAIN_SCALING 25.0
 
+// Set zero temp if adc below this value
+#define ADC_TEMP_ZERO   25
+
 #define TEMP_GAIN_INT_CORR_DEFAULT 1
 #define TEMP_GAIN_DEC_CORR_DEFAULT 0
 #define TEMP_OFFSET_CORR_DEFAULT   0

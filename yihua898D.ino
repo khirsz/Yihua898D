@@ -342,9 +342,13 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     }
 #endif
 
-    pDev_state->temp_inst = pDev_state->adc_raw * pDev_cfg->temp_gain_int_corr.value 
-                             + ((int16_t)((((int32_t)pDev_state->adc_raw) * ((int32_t)pDev_cfg->temp_gain_dec_corr.value)) / ((int32_t)1000))) 
-                             + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
+    if (pDev_state->adc_raw < ADC_TEMP_ZERO) { // Set temperature to zero for low ADC values (needed with temperature offset)
+      pDev_state->temp_inst = 0;
+    } else {
+      pDev_state->temp_inst = pDev_state->adc_raw * pDev_cfg->temp_gain_int_corr.value 
+                               + ((int16_t)((((int32_t)pDev_state->adc_raw) * ((int32_t)pDev_cfg->temp_gain_dec_corr.value)) / ((int32_t)1000))) 
+                               + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
+    }
 
     if (pDev_state->temp_inst < 0) {
       pDev_state->temp_inst = 0;
