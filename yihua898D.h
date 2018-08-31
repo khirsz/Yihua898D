@@ -138,7 +138,7 @@
 #define SLP_TIMEOUT_DEFAULT 20
 
 #define BUTTON_SCANN_CYCLE        100
-#define LONG_PRESS_SCANN_CYCLE    200
+#define LONG_PRESS_SCANN_CYCLE    300
 
 #define KEY_UP          BT_UP
 #define KEY_DOWN        BT_DW
