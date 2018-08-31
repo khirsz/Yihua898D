@@ -342,14 +342,9 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
     }
 #endif
 
-    if (pDev_cfg->temp_gain_dec_corr.value == 0) { // no decimal part of the gain coefficient 
-      pDev_state->temp_inst = pDev_state->adc_raw * pDev_cfg->temp_gain_int_corr.value 
-                               + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
-    } else {
-      pDev_state->temp_inst = ((int16_t)((((int32_t)pDev_state->adc_raw) * ((int32_t)pDev_cfg->temp_gain_int_corr.value) 
-                               * ((int32_t)pDev_cfg->temp_gain_dec_corr.value)) / ((int32_t)1000))) 
-                               + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
-    }
+    pDev_state->temp_inst = pDev_state->adc_raw * pDev_cfg->temp_gain_int_corr.value 
+                             + ((int16_t)((((int32_t)pDev_state->adc_raw) * ((int32_t)pDev_cfg->temp_gain_dec_corr.value)) / ((int32_t)1000))) 
+                             + pDev_cfg->temp_offset_corr.value;  // approx. temp in °C
 
     if (pDev_state->temp_inst < 0) {
       pDev_state->temp_inst = 0;
