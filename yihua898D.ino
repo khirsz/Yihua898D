@@ -559,7 +559,7 @@ void UI_hndl(void)
   }  
   
   if (sp_mode) {
-    if (get_key_event(KEY_UP | KEY_DOWN)) {// Fan only mode
+    if (get_key_event_short(KEY_UP | KEY_DOWN)) {// Fan only mode
       if (sp_mode == DEV_HA) {
         pDev_cfg->fan_only.value ^= 0x01;
       }
@@ -712,7 +712,7 @@ void config_mode(void)
     //Configure device
     if (mode == MODE_DEV_SEL) {
       // Device select mode
-      if (get_key_event(KEY_UP | KEY_DOWN)) { // Exit
+      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
         break;
       } else if (get_key_event(KEY_ENTER)) {
         mode = MODE_VAR_SW;
@@ -754,7 +754,7 @@ void config_mode(void)
       }
     } else if (mode == MODE_VAR_SW) {
       // Variable switching mode
-      if (get_key_event(KEY_UP | KEY_DOWN)) { // To device select mode or exit
+      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
         param_num = 0;
         if (ha_state.enabled ^ si_state.enabled) {
           // Only one device active, exit
