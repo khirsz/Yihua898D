@@ -535,7 +535,7 @@ void UI_hndl(void)
   }
   
   // menu key handling
-  if (get_key_event_short(KEY_ENTER)) {
+  if (get_key_event(KEY_ENTER)) {
     sp_mode++;
     if (sp_mode == DEV_HA && !HA_start) {
       //HA disabled, skip this state
@@ -559,7 +559,7 @@ void UI_hndl(void)
   }  
   
   if (sp_mode) {
-    if (get_key_event_short(KEY_UP | KEY_DOWN)) {// Fan only mode
+    if (get_key_event(KEY_UP | KEY_DOWN)) {// Fan only mode
       if (sp_mode == DEV_HA) {
         pDev_cfg->fan_only.value ^= 0x01;
       }
@@ -712,9 +712,9 @@ void config_mode(void)
     //Configure device
     if (mode == MODE_DEV_SEL) {
       // Device select mode
-      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // Exit
+      if (get_key_event(KEY_UP | KEY_DOWN)) { // Exit
         break;
-      } else if (get_key_event_short(KEY_ENTER)) {
+      } else if (get_key_event(KEY_ENTER)) {
         mode = MODE_VAR_SW;
         if (dev_type == DEV_HA) {
           disp = ha_cfg.disp_n;
@@ -725,12 +725,12 @@ void config_mode(void)
           param_max_num = NELEMS(si_set_order);
           pSet_order = si_set_order;
         }
-      } else if (get_key_event_short(KEY_UP)) {
+      } else if (get_key_event(KEY_UP)) {
         dev_type++;
         if (dev_type > DEV_SI) {
           dev_type = DEV_HA;
         }    
-      } else if (get_key_event_short(KEY_DOWN)) {
+      } else if (get_key_event(KEY_DOWN)) {
         dev_type--;
         if (dev_type < DEV_HA) {
           dev_type = DEV_SI;
@@ -754,7 +754,7 @@ void config_mode(void)
       }
     } else if (mode == MODE_VAR_SW) {
       // Variable switching mode
-      if (get_key_event_short(KEY_UP | KEY_DOWN)) { // To device select mode or exit
+      if (get_key_event(KEY_UP | KEY_DOWN)) { // To device select mode or exit
         param_num = 0;
         if (ha_state.enabled ^ si_state.enabled) {
           // Only one device active, exit
@@ -762,14 +762,14 @@ void config_mode(void)
         } else {
           mode = MODE_DEV_SEL;
         }
-      } else if (get_key_event_short(KEY_ENTER)) {
+      } else if (get_key_event(KEY_ENTER)) {
         mode = MODE_VAL_SET;
-      } else if (get_key_event_short(KEY_DOWN)) {
+      } else if (get_key_event(KEY_DOWN)) {
         if (param_num+1 < param_max_num) {
           param_num++;
           tm1628.showStr(disp,pSet_order[param_num]->szName);
         }
-      } else if (get_key_event_short(KEY_UP)) {
+      } else if (get_key_event(KEY_UP)) {
         if (param_num) {
           param_num--;
           tm1628.showStr(disp,pSet_order[param_num]->szName);
@@ -783,13 +783,16 @@ void config_mode(void)
       }       
     } else {
       // Edit value mode     
-      if (get_key_event_short(KEY_ENTER)) {
+      if (get_key_event(KEY_UP | KEY_DOWN)) { //Exit without saving
+        eep_load(pSet_order[param_num]);
+        mode = MODE_VAR_SW;
+      } else if (get_key_event(KEY_ENTER)) {
         eep_save(pSet_order[param_num]);
         mode = MODE_VAR_SW;
         tm1628.showNum(disp,pSet_order[param_num]->value);
         delay(1000);
         key_event_clear();
-      } if (get_key_event_long(KEY_UP)) {
+      } else if (get_key_event_long(KEY_UP)) {
         if (pSet_order[param_num]->value < pSet_order[param_num]->value_max - 10) {
           pSet_order[param_num]->value += 10;
         }
@@ -797,10 +800,7 @@ void config_mode(void)
         if (pSet_order[param_num]->value > pSet_order[param_num]->value_min + 10) {
           pSet_order[param_num]->value -= 10;
         }
-      } else if (get_key_event_short(KEY_UP | KEY_DOWN)) { //Exit without saving
-        eep_load(pSet_order[param_num]);
-        mode = MODE_VAR_SW;
-      }else if (get_key_event_short(KEY_UP)) {
+      } else if (get_key_event_short(KEY_UP)) {
         if (pSet_order[param_num]->value < pSet_order[param_num]->value_max) {
           pSet_order[param_num]->value++;
         }
@@ -1285,6 +1285,19 @@ uint8_t get_key_event_short(uint8_t key_mask)
 uint8_t get_key_event_long(uint8_t key_mask)
 {
   if ((key_state_l & key_mask) == key_mask) {
+    key_state_l &= ~key_mask;
+    return key_mask;
+  }
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////////
+//
+uint8_t get_key_event(uint8_t key_mask)
+{
+  if ((key_state_s & key_mask) == key_mask 
+      || (key_state_l & key_mask) == key_mask) {
+    key_state_s &= ~key_mask;
     key_state_l &= ~key_mask;
     return key_mask;
   }
