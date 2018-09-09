@@ -219,6 +219,10 @@ void setup()
       delay(1000);
       tm1628.clear(DISP_1);
       delay(1000);
+      key_scan();
+      if (get_key_state(KEY_ENTER)) {
+        break; 
+      }
 #ifdef DEBUG
       break;
 #endif
