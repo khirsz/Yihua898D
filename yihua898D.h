@@ -90,12 +90,12 @@
 #define HEATER_DUTY_CYCLE_MAX PWM_CYCLES
 
 #define P_GAIN_DEFAULT 650
+#define P_SCALING_DEFAULT (-2)
 #define I_GAIN_DEFAULT 15
-#define D_GAIN_DEFAULT 500
+#define I_SCALING_DEFAULT (-4)
+#define D_GAIN_DEFAULT 200
+#define D_SCALING_DEFAULT (-1)
 #define I_THRESH_DEFAULT 45
-#define P_GAIN_SCALING 100.0
-#define I_GAIN_SCALING 10000.0
-#define D_GAIN_SCALING 25.0
 
 // Set zero temp if adc below this value
 #define ADC_TEMP_ZERO   25
@@ -193,8 +193,11 @@ typedef struct DEV_CFG {
   uint8_t dev_type;
   uint8_t disp_n;
   CPARAM p_gain;
+  CPARAM p_scal;
   CPARAM i_gain;
+  CPARAM i_scal;
   CPARAM d_gain;
+  CPARAM d_scal;
   CPARAM i_thresh;
   CPARAM temp_gain_int_corr;
   CPARAM temp_gain_dec_corr;

@@ -77,31 +77,35 @@ DEV_CFG ha_cfg = {
   /* device type */        DEV_HA,
   /* display number */     DISP_2,
   /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 4, 5, "I"},
-  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 6, 7, "d"},
-  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 8, 9, "ItH"},
-  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 10, 11, "tgI"},
-  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 12, 13, "tgd"},
-  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 14, 15, "toF"},
-  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 16, 17, "Avg"},
-  /* slp_timeout */        { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 18, 19, "SLP"},
-  /* display_adc_raw */    { 0, 1, 0, 0, 20, 21, "Adc"},
+  /* p_scal */             { -128, 127, P_SCALING_DEFAULT, P_SCALING_DEFAULT, 4, 5, "PSL"}, // (p_gain x 10^p_scal)
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 6, 7, "I"},
+  /* i_scal */             { -128, 127, I_SCALING_DEFAULT, I_SCALING_DEFAULT, 8, 9, "ISL"}, // (i_gain x 10^i_scal)
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 10, 11, "d"},
+  /* d_scal */             { -128, 127, D_SCALING_DEFAULT, D_SCALING_DEFAULT, 12, 13, "dSL"}, // (d_gain x 10^d_scal)
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 14, 15, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 16, 17, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 18, 19, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 20, 21, "toF"},
+  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 22, 23, "Avg"},
+  /* slp_timeout */        { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 24, 25, "SLP"},
+  /* display_adc_raw */    { 0, 1, 0, 0, 26, 27, "Adc"},
 #ifdef CURRENT_SENSE_MOD   
-  /* fan_current_min */    { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 24, 25, "FcL"},
-  /* fan_current_max */    { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 26, 27, "FcH"},
+  /* fan_current_min */    { 0, 999, FAN_CURRENT_MIN_DEFAULT, FAN_CURRENT_MIN_DEFAULT, 32, 33, "FcL"},
+  /* fan_current_max */    { 0, 999, FAN_CURRENT_MAX_DEFAULT, FAN_CURRENT_MAX_DEFAULT, 34, 35, "FcH"},
 #elif defined(SPEED_SENSE_MOD)
   //
   // See yihua898d.h if you want to use the 'FAN-speed mod' (HW changes required)
   // The following 2 CPARAM lines need changes in that case
   //
-  /* fan_speed_min */      { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 28, 29, "FSL"},
-  /* fan_speed_max */      { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 30, 31, "FSH"},
+  /* fan_speed_min */      { 120, 180, FAN_SPEED_MIN_DEFAULT, FAN_SPEED_MIN_DEFAULT, 36, 37, "FSL"},
+  /* fan_speed_max */      { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 38, 39, "FSH"},
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 22, 23, "StP"},
-  /* fan_only */           { 0, 1, 0, 0, 26, 27, "FnO"},
+  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 28, 29, "StP"},
+  /* fan_only */           { 0, 1, 0, 0, 30, 31, "FnO"},
 };
-CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.i_gain, &ha_cfg.d_gain, &ha_cfg.i_thresh,
+CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.p_scal, &ha_cfg.i_gain, &ha_cfg.i_scal, 
+                                      &ha_cfg.d_gain, &ha_cfg.d_scal, &ha_cfg.i_thresh,
                                       &ha_cfg.temp_gain_int_corr, &ha_cfg.temp_gain_dec_corr, &ha_cfg.temp_offset_corr, 
                                       &ha_cfg.temp_averages, &ha_cfg.slp_timeout, &ha_cfg.display_adc_raw,
 #ifdef CURRENT_SENSE_MOD
@@ -117,15 +121,18 @@ DEV_CFG si_cfg = {
   /* device type */        DEV_SI,
   /* display number */     DISP_1,
   /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 100, 101, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 102, 103, "I"},
-  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 14, 105, "d"},
-  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 106, 107, "ItH"},
-  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 108, 109, "tgI"},
-  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 110, 111, "tgd"},
-  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 112, 113, "toF"},
-  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 114, 115, "Avg"},
+  /* p_scal */             { -128, 127, P_SCALING_DEFAULT, P_SCALING_DEFAULT, 102, 103, "PSL"}, // (p_gain x 10^p_scal)
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 104, 105, "I"},
+  /* i_scal */             { -128, 127, I_SCALING_DEFAULT, I_SCALING_DEFAULT, 106, 107, "ISL"}, // (i_gain x 10^i_scal)
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 108, 109, "d"},
+  /* d_scal */             { -128, 127, D_SCALING_DEFAULT, D_SCALING_DEFAULT, 110, 111, "dSL"}, // (d_gain x 10^d_scal)
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 112, 113, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 114, 115, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 116, 117, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 118, 119, "toF"},
+  /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 120, 121, "Avg"},
   /* slp_timeout */        CPARAM_NULL,
-  /* display_adc_raw */    { 0, 1, 0, 0, 116, 117, "Adc"},
+  /* display_adc_raw */    { 0, 1, 0, 0, 122, 123, "Adc"},
 #ifdef CURRENT_SENSE_MOD
   /* fan_current_min */    CPARAM_NULL,
   /* fan_current_max */    CPARAM_NULL,
@@ -134,10 +141,11 @@ DEV_CFG si_cfg = {
   /* fan_speed_max */      CPARAM_NULL,
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 118, 119, "StP"},
+  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 124, 125, "StP"},
   /* fan_only */           CPARAM_NULL,
 };
-CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.i_gain, &si_cfg.d_gain, &si_cfg.i_thresh,
+CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.p_scal, &si_cfg.i_gain, &si_cfg.i_scal,
+                                      &si_cfg.d_gain, &si_cfg.d_scal, &si_cfg.i_thresh,
                                       &si_cfg.temp_gain_int_corr, &si_cfg.temp_gain_dec_corr, &si_cfg.temp_offset_corr, 
                                       &si_cfg.temp_averages, &si_cfg.display_adc_raw,};
 CNTRL_STATE si_state;
@@ -146,6 +154,21 @@ volatile uint8_t key_state = 0;  // debounced and inverted key state: bit = 1: k
 volatile uint8_t key_state_l = 0; // key long press
 volatile uint8_t key_state_s = 0; // key short press
 volatile uint8_t sw_state = 0; // debounced switch state: bit = 1: sw on
+
+static float scale10(int16_t x, int8_t scaling)
+{
+  float r = (float) x;
+  if (scaling > 0) {
+    while (scaling--)
+       r *= 10.0;
+  } else if (scaling < 0) {
+    scaling = -scaling;
+    while (scaling--)
+       r /= 10.0;
+  } 
+  
+  return r; 
+}
 
 void setup()
 {
@@ -384,8 +407,9 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
       }
 
       pDev_state->PID_drive =
-          pDev_state->error * (pDev_cfg->p_gain.value / P_GAIN_SCALING) + pDev_state->error_accu * (pDev_cfg->i_gain.value / I_GAIN_SCALING) +
-          pDev_state->velocity * (pDev_cfg->d_gain.value / D_GAIN_SCALING);
+          pDev_state->error * scale10(pDev_cfg->p_gain.value, pDev_cfg->p_scal.value) +
+          pDev_state->error_accu * scale10(pDev_cfg->i_gain.value, pDev_cfg->i_scal.value) +
+          pDev_state->velocity * scale10(pDev_cfg->d_gain.value, pDev_cfg->d_scal.value);
 
       pDev_state->heater_duty_cycle = (int16_t) (pDev_state->PID_drive);
 
@@ -869,8 +893,11 @@ void init_state(CNTRL_STATE *pDev_state) {
 void load_cfg(void)
 {
   eep_load(&ha_cfg.p_gain);
+  eep_load(&ha_cfg.p_scal);
   eep_load(&ha_cfg.i_gain);
+  eep_load(&ha_cfg.i_scal);
   eep_load(&ha_cfg.d_gain);
+  eep_load(&ha_cfg.d_scal);
   eep_load(&ha_cfg.i_thresh);
   eep_load(&ha_cfg.temp_gain_int_corr);
   eep_load(&ha_cfg.temp_gain_dec_corr);
@@ -889,8 +916,11 @@ void load_cfg(void)
 #endif
 
   eep_load(&si_cfg.p_gain);
+  eep_load(&si_cfg.p_scal);
   eep_load(&si_cfg.i_gain);
+  eep_load(&si_cfg.i_scal);
   eep_load(&si_cfg.d_gain);
+  eep_load(&si_cfg.d_scal);
   eep_load(&si_cfg.i_thresh);
   eep_load(&si_cfg.temp_gain_int_corr);
   eep_load(&si_cfg.temp_gain_dec_corr);
@@ -936,8 +966,11 @@ void restore_default_conf(void)
   delay(1000);
   tm1628.clear(DISP_ALL);
   ha_cfg.p_gain.value = ha_cfg.p_gain.value_default;
+  ha_cfg.p_scal.value = ha_cfg.p_scal.value_default;
   ha_cfg.i_gain.value = ha_cfg.i_gain.value_default;
+  ha_cfg.i_scal.value = ha_cfg.i_scal.value_default;
   ha_cfg.d_gain.value = ha_cfg.d_gain.value_default;
+  ha_cfg.d_scal.value = ha_cfg.d_scal.value_default;
   ha_cfg.i_thresh.value = ha_cfg.i_thresh.value_default;
   ha_cfg.temp_gain_int_corr.value = ha_cfg.temp_gain_int_corr.value_default;
   ha_cfg.temp_gain_dec_corr.value = ha_cfg.temp_gain_dec_corr.value_default;
@@ -956,8 +989,11 @@ void restore_default_conf(void)
 #endif
 
   eep_save(&ha_cfg.p_gain);
+  eep_save(&ha_cfg.p_scal);
   eep_save(&ha_cfg.i_gain);
+  eep_save(&ha_cfg.i_scal);
   eep_save(&ha_cfg.d_gain);
+  eep_save(&ha_cfg.d_scal);
   eep_save(&ha_cfg.i_thresh);
   eep_save(&ha_cfg.temp_gain_int_corr);
   eep_save(&ha_cfg.temp_gain_dec_corr);
@@ -977,8 +1013,11 @@ void restore_default_conf(void)
 
 
   si_cfg.p_gain.value = si_cfg.p_gain.value_default;
+  si_cfg.p_scal.value = si_cfg.p_scal.value_default;
   si_cfg.i_gain.value = si_cfg.i_gain.value_default;
+  si_cfg.i_scal.value = si_cfg.i_scal.value_default;
   si_cfg.d_gain.value = si_cfg.d_gain.value_default;
+  si_cfg.d_scal.value = si_cfg.d_scal.value_default;
   si_cfg.i_thresh.value = si_cfg.i_thresh.value_default;
   si_cfg.temp_gain_int_corr.value = si_cfg.temp_gain_int_corr.value_default;
   si_cfg.temp_gain_dec_corr.value = si_cfg.temp_gain_dec_corr.value_default;
@@ -988,8 +1027,11 @@ void restore_default_conf(void)
   si_cfg.display_adc_raw.value = si_cfg.display_adc_raw.value_default;
 
   eep_save(&si_cfg.p_gain);
+  eep_save(&si_cfg.p_scal);
   eep_save(&si_cfg.i_gain);
+  eep_save(&si_cfg.i_scal);
   eep_save(&si_cfg.d_gain);
+  eep_save(&si_cfg.d_scal);
   eep_save(&si_cfg.i_thresh);
   eep_save(&si_cfg.temp_gain_int_corr);
   eep_save(&si_cfg.temp_gain_dec_corr);
