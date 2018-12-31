@@ -411,15 +411,16 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
           pDev_state->error_accu * scale10(pDev_cfg->i_gain.value, pDev_cfg->i_scal.value) +
           pDev_state->velocity * scale10(pDev_cfg->d_gain.value, pDev_cfg->d_scal.value);
 
+      // Check range before casting to avoid int16 overflow
+      if (pDev_state->PID_drive > (float) HEATER_DUTY_CYCLE_MAX) {
+        pDev_state->PID_drive = (float) HEATER_DUTY_CYCLE_MAX;
+      }
+
+      if (pDev_state->PID_drive < 0.0) {
+        pDev_state->PID_drive = 0.0;
+      }     
+
       pDev_state->heater_duty_cycle = (int16_t) (pDev_state->PID_drive);
-
-      if (pDev_state->heater_duty_cycle > HEATER_DUTY_CYCLE_MAX) {
-        pDev_state->heater_duty_cycle = HEATER_DUTY_CYCLE_MAX;
-      }
-
-      if (pDev_state->heater_duty_cycle < 0) {
-        pDev_state->heater_duty_cycle = 0;
-      }
 
       if (pDev_state->heater_ctr < pDev_state->heater_duty_cycle) {
         tm1628.setDot(pDev_cfg->disp_n,0);
