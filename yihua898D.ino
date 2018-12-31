@@ -76,16 +76,16 @@ TM1628 tm1628(DATA_PIN, SCLK_PIN, STB_PIN);
 DEV_CFG ha_cfg = {
   /* device type */        DEV_HA,
   /* display number */     DISP_2,
-  /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* p_scal */             { -128, 127, P_SCALING_DEFAULT, P_SCALING_DEFAULT, 4, 5, "PSL"}, // (p_gain x 10^p_scal)
-  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 6, 7, "I"},
-  /* i_scal */             { -128, 127, I_SCALING_DEFAULT, I_SCALING_DEFAULT, 8, 9, "ISL"}, // (i_gain x 10^i_scal)
-  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 10, 11, "d"},
-  /* d_scal */             { -128, 127, D_SCALING_DEFAULT, D_SCALING_DEFAULT, 12, 13, "dSL"}, // (d_gain x 10^d_scal)
-  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 14, 15, "ItH"},
-  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 16, 17, "tgI"},
-  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 18, 19, "tgd"},
-  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 20, 21, "toF"},
+  /* p_gain */             { 0, 999, P_GAIN_DEFAULT_HA, P_GAIN_DEFAULT_HA, 2, 3, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* p_scal */             { -128, 127, P_SCALING_DEFAULT_HA, P_SCALING_DEFAULT_HA, 4, 5, "PSL"}, // (p_gain x 10^p_scal)
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT_HA, I_GAIN_DEFAULT_HA, 6, 7, "I"},
+  /* i_scal */             { -128, 127, I_SCALING_DEFAULT_HA, I_SCALING_DEFAULT_HA, 8, 9, "ISL"}, // (i_gain x 10^i_scal)
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT_HA, D_GAIN_DEFAULT_HA, 10, 11, "d"},
+  /* d_scal */             { -128, 127, D_SCALING_DEFAULT_HA, D_SCALING_DEFAULT_HA, 12, 13, "dSL"}, // (d_gain x 10^d_scal)
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT_HA, I_THRESH_DEFAULT_HA, 14, 15, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT_HA, TEMP_GAIN_INT_CORR_DEFAULT_HA, 16, 17, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT_HA, TEMP_GAIN_DEC_CORR_DEFAULT_HA, 18, 19, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT_HA, TEMP_OFFSET_CORR_DEFAULT_HA, 20, 21, "toF"},
   /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 22, 23, "Avg"},
   /* slp_timeout */        { 0, 30, SLP_TIMEOUT_DEFAULT, SLP_TIMEOUT_DEFAULT, 24, 25, "SLP"},
   /* display_adc_raw */    { 0, 1, 0, 0, 26, 27, "Adc"},
@@ -120,16 +120,16 @@ CNTRL_STATE ha_state;
 DEV_CFG si_cfg = {
   /* device type */        DEV_SI,
   /* display number */     DISP_1,
-  /* p_gain */             { 0, 999, P_GAIN_DEFAULT, P_GAIN_DEFAULT, 100, 101, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
-  /* p_scal */             { -128, 127, P_SCALING_DEFAULT, P_SCALING_DEFAULT, 102, 103, "PSL"}, // (p_gain x 10^p_scal)
-  /* i_gain */             { 0, 999, I_GAIN_DEFAULT, I_GAIN_DEFAULT, 104, 105, "I"},
-  /* i_scal */             { -128, 127, I_SCALING_DEFAULT, I_SCALING_DEFAULT, 106, 107, "ISL"}, // (i_gain x 10^i_scal)
-  /* d_gain */             { 0, 999, D_GAIN_DEFAULT, D_GAIN_DEFAULT, 108, 109, "d"},
-  /* d_scal */             { -128, 127, D_SCALING_DEFAULT, D_SCALING_DEFAULT, 110, 111, "dSL"}, // (d_gain x 10^d_scal)
-  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT, I_THRESH_DEFAULT, 112, 113, "ItH"},
-  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT, TEMP_GAIN_INT_CORR_DEFAULT, 114, 115, "tgI"},
-  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT, TEMP_GAIN_DEC_CORR_DEFAULT, 116, 117, "tgd"},
-  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT, TEMP_OFFSET_CORR_DEFAULT, 118, 119, "toF"},
+  /* p_gain */             { 0, 999, P_GAIN_DEFAULT_SI, P_GAIN_DEFAULT_SI, 100, 101, "P"},  // min, max, default, value, eep_addr_high, eep_addr_low, name
+  /* p_scal */             { -128, 127, P_SCALING_DEFAULT_SI, P_SCALING_DEFAULT_SI, 102, 103, "PSL"}, // (p_gain x 10^p_scal)
+  /* i_gain */             { 0, 999, I_GAIN_DEFAULT_SI, I_GAIN_DEFAULT_SI, 104, 105, "I"},
+  /* i_scal */             { -128, 127, I_SCALING_DEFAULT_SI, I_SCALING_DEFAULT_SI, 106, 107, "ISL"}, // (i_gain x 10^i_scal)
+  /* d_gain */             { 0, 999, D_GAIN_DEFAULT_SI, D_GAIN_DEFAULT_SI, 108, 109, "d"},
+  /* d_scal */             { -128, 127, D_SCALING_DEFAULT_SI, D_SCALING_DEFAULT_SI, 110, 111, "dSL"}, // (d_gain x 10^d_scal)
+  /* i_thresh */           { 0, 100, I_THRESH_DEFAULT_SI, I_THRESH_DEFAULT_SI, 112, 113, "ItH"},
+  /* temp_gain_int_corr */ { 0, 999, TEMP_GAIN_INT_CORR_DEFAULT_SI, TEMP_GAIN_INT_CORR_DEFAULT_SI, 114, 115, "tgI"},
+  /* temp_gain_dec_corr */ { 0, 999, TEMP_GAIN_DEC_CORR_DEFAULT_SI, TEMP_GAIN_DEC_CORR_DEFAULT_SI, 116, 117, "tgd"},
+  /* temp_offset_corr */   { -999, 999, TEMP_OFFSET_CORR_DEFAULT_SI, TEMP_OFFSET_CORR_DEFAULT_SI, 118, 119, "toF"},
   /* temp_averages */      { 100, 999, TEMP_AVERAGES_DEFAULT, TEMP_AVERAGES_DEFAULT, 120, 121, "Avg"},
   /* slp_timeout */        CPARAM_NULL,
   /* display_adc_raw */    { 0, 1, 0, 0, 122, 123, "Adc"},
