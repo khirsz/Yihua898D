@@ -89,13 +89,13 @@
 #define PWM_CYCLES 512L
 #define HEATER_DUTY_CYCLE_MAX PWM_CYCLES
 
-#define P_GAIN_DEFAULT_HA 650
+#define P_GAIN_DEFAULT_HA 750
 #define P_SCALING_DEFAULT_HA (-2)
-#define I_GAIN_DEFAULT_HA 15
-#define I_SCALING_DEFAULT_HA (-4)
-#define D_GAIN_DEFAULT_HA 200
+#define I_GAIN_DEFAULT_HA 40
+#define I_SCALING_DEFAULT_HA (-5)
+#define D_GAIN_DEFAULT_HA 80
 #define D_SCALING_DEFAULT_HA (-1)
-#define I_THRESH_DEFAULT_HA 45
+#define I_THRESH_DEFAULT_HA 80
 
 #define P_GAIN_DEFAULT_SI 100
 #define P_SCALING_DEFAULT_SI 3
@@ -105,7 +105,7 @@
 #define D_SCALING_DEFAULT_SI 0
 #define I_THRESH_DEFAULT_SI 80
 
-// Set zero temp if adc below this value
+// Set zero temp if adc is below this value
 #define ADC_TEMP_ZERO   25
 
 #define TEMP_GAIN_INT_CORR_DEFAULT_HA 0
@@ -151,7 +151,7 @@
 #define FAN_CURRENT_MIN_DEFAULT 30UL
 #define FAN_CURRENT_MAX_DEFAULT 71UL
 
-#define SLP_TIMEOUT_DEFAULT 20
+#define SLP_TIMEOUT_DEFAULT 30
 
 #define BUTTON_SCANN_CYCLE        100
 #define LONG_PRESS_SCANN_CYCLE    300
