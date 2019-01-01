@@ -108,9 +108,9 @@
 // Set zero temp if adc below this value
 #define ADC_TEMP_ZERO   25
 
-#define TEMP_GAIN_INT_CORR_DEFAULT_HA 1
-#define TEMP_GAIN_DEC_CORR_DEFAULT_HA 0
-#define TEMP_OFFSET_CORR_DEFAULT_HA   0
+#define TEMP_GAIN_INT_CORR_DEFAULT_HA 0
+#define TEMP_GAIN_DEC_CORR_DEFAULT_HA 559
+#define TEMP_OFFSET_CORR_DEFAULT_HA   55
 
 #define TEMP_GAIN_INT_CORR_DEFAULT_SI 0
 #define TEMP_GAIN_DEC_CORR_DEFAULT_SI 495
@@ -122,11 +122,11 @@
 #define TEMP_REACHED_MARGIN 3
 
 #define MAX_TEMP_ERR 550L
-#define SAFE_TO_TOUCH_TEMP 40
+#define DISPLAY_ON_TEMP 75
+#define DISPLAY_OFF_TEMP 70
 
 #define FAN_OFF_TEMP 45
-#define FAN_ON_TEMP 60
-#define FAN_OFF_TEMP_FANONLY (SAFE_TO_TOUCH_TEMP - 2)
+#define FAN_ON_TEMP 75
 
 //
 // Comment out the following 2 #defines, if you want to use the FAN-speed mod (HW changes required)
@@ -256,6 +256,8 @@ typedef struct CNTRL_STATE {
   uint8_t test_state;
 
   uint8_t enabled;
+
+  uint8_t temp_disp_on;
 } CNTRL_STATE;
 
 void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state);

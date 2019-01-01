@@ -101,7 +101,7 @@ DEV_CFG ha_cfg = {
   /* fan_speed_max */      { 300, 400, FAN_SPEED_MAX_DEFAULT, FAN_SPEED_MAX_DEFAULT, 38, 39, "FSH"},
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 28, 29, "StP"},
+  /* temp_setpoint */      { 80, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 28, 29, "StP"},
   /* fan_only */           { 0, 1, 0, 0, 30, 31, "FnO"},
 };
 CPARAM * ha_set_order[] = {&ha_cfg.p_gain, &ha_cfg.p_scal, &ha_cfg.i_gain, &ha_cfg.i_scal, 
@@ -141,7 +141,7 @@ DEV_CFG si_cfg = {
   /* fan_speed_max */      CPARAM_NULL,
 #endif
   // Not configurable in setting change mode
-  /* temp_setpoint */      { 50, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 124, 125, "StP"},
+  /* temp_setpoint */      { 80, 500, TEMP_SETPOINT_DEFAULT, TEMP_SETPOINT_DEFAULT, 124, 125, "StP"},
   /* fan_only */           CPARAM_NULL,
 };
 CPARAM * si_set_order[] = {&si_cfg.p_gain, &si_cfg.p_scal, &si_cfg.i_gain, &si_cfg.i_scal,
@@ -466,9 +466,7 @@ void dev_cntrl(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state)
         FAN_ON;
       } else if (pDev_state->temp_average >= FAN_ON_TEMP) {
         FAN_ON;
-      } else if (REEDSW_CLOSED && pDev_cfg->fan_only.value == 1 && (pDev_state->temp_average <= FAN_OFF_TEMP_FANONLY)) {
-        FAN_OFF;
-      } else if (REEDSW_CLOSED && pDev_cfg->fan_only.value == 0 && (pDev_state->temp_average <= FAN_OFF_TEMP)) {
+      } else if (REEDSW_CLOSED && (pDev_state->temp_average <= FAN_OFF_TEMP)) {
         FAN_OFF;
       }
     }
@@ -655,7 +653,13 @@ void temperature_display(DEV_CFG *pDev_cfg, CNTRL_STATE *pDev_state, uint8_t bli
     return;
   }
 
-  if (pDev_state->temp_average <= SAFE_TO_TOUCH_TEMP) {
+  if (pDev_state->temp_average <= DISPLAY_OFF_TEMP) {
+    pDev_state->temp_disp_on = 0;     
+  } else if (pDev_state->temp_average >= DISPLAY_ON_TEMP) {
+    pDev_state->temp_disp_on = 1;
+  }
+
+  if (!pDev_state->temp_disp_on) {
     if (pDev_cfg->dev_type == DEV_HA && pDev_cfg->fan_only.value == 1) {
       tm1628.showStr(pDev_cfg->disp_n, "FAn");
     } else {
